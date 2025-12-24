@@ -16,6 +16,7 @@ import { useCreateBooking } from '@/hooks/useBookings';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/currency';
 
 export default function BookTicketPage() {
   const { user } = useAuth();
@@ -252,7 +253,7 @@ export default function BookTicketPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold text-primary">
-                              ${route?.base_fare || 0}
+                              {formatCurrency(route?.base_fare || 0)}
                             </p>
                             <p className="text-xs text-muted-foreground">per person</p>
                           </div>
@@ -326,12 +327,12 @@ export default function BookTicketPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Fare per person</span>
-                      <span className="font-medium">${route?.base_fare || 0}</span>
+                      <span className="font-medium">{formatCurrency(route?.base_fare || 0)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-lg">
                       <span className="font-semibold">Total</span>
-                      <span className="font-bold text-primary">${totalFare}</span>
+                      <span className="font-bold text-primary">{formatCurrency(totalFare)}</span>
                     </div>
 
                     <div className="pt-4 space-y-3">

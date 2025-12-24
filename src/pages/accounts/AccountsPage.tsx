@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Search } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Search, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency, CURRENCY_SYMBOL } from '@/lib/currency';
 
 export default function AccountsPage() {
   const { data: transactions, isLoading: transactionsLoading } = useTransactions();
@@ -82,7 +83,7 @@ export default function AccountsPage() {
                 <TrendingUp className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-500">${totalIncome.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-green-500">{formatCurrency(totalIncome)}</div>
               </CardContent>
             </Card>
             <Card>
@@ -91,24 +92,24 @@ export default function AccountsPage() {
                 <TrendingDown className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-500">${totalExpense.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpense)}</div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <Banknote className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  ${netProfit.toFixed(2)}
+                  {formatCurrency(netProfit)}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Transactions</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <Banknote className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{transactions?.length || 0}</div>
@@ -190,7 +191,7 @@ export default function AccountsPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="amount">Amount ($)</Label>
+                            <Label htmlFor="amount">Amount ({CURRENCY_SYMBOL})</Label>
                             <Input
                               id="amount"
                               type="number"
@@ -257,7 +258,7 @@ export default function AccountsPage() {
                       <TableCell className="capitalize">{transaction.category.replace('_', ' ')}</TableCell>
                       <TableCell>{transaction.description || '-'}</TableCell>
                       <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                        {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -293,10 +294,10 @@ export default function AccountsPage() {
                       <TableCell>
                         {format(new Date(record.period_start), 'MMM d')} - {format(new Date(record.period_end), 'MMM d, yyyy')}
                       </TableCell>
-                      <TableCell>${record.base_salary.toFixed(2)}</TableCell>
-                      <TableCell className="text-green-500">+${(record.bonus || 0).toFixed(2)}</TableCell>
-                      <TableCell className="text-red-500">-${(record.deductions || 0).toFixed(2)}</TableCell>
-                      <TableCell className="font-medium">${record.net_amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(record.base_salary)}</TableCell>
+                      <TableCell className="text-green-500">+{formatCurrency(record.bonus || 0)}</TableCell>
+                      <TableCell className="text-red-500">-{formatCurrency(record.deductions || 0)}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(record.net_amount)}</TableCell>
                       <TableCell>
                         <Badge variant={record.status === 'paid' ? 'default' : 'outline'}>
                           {record.status}

@@ -1,12 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart3, TrendingUp, Users, Bus, DollarSign, Ticket } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Bus, Ticket, Banknote } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useBookings } from '@/hooks/useBookings';
 import { useBuses } from '@/hooks/useBuses';
 import { useDrivers } from '@/hooks/useDrivers';
 import { useTransactions } from '@/hooks/useAccounts';
+import { formatCurrency } from '@/lib/currency';
 
 const monthlyRevenue = [
   { month: 'Jan', revenue: 12500, bookings: 245 },
@@ -67,15 +68,14 @@ export default function ReportsPage() {
         </Select>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-            <DollarSign className="h-5 w-5 text-primary" />
+            <Banknote className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
             <p className="text-xs text-success mt-1">+12.5% from last month</p>
           </CardContent>
         </Card>
