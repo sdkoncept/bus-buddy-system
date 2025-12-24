@@ -22,7 +22,8 @@ export default function CustomerServicePage() {
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [resolution, setResolution] = useState('');
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null | undefined) => {
+    if (!status) return <Badge variant="outline">Unknown</Badge>;
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       open: 'destructive',
       in_progress: 'default',
