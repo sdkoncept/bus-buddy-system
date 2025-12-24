@@ -3,6 +3,10 @@ export type BusStatus = 'active' | 'maintenance' | 'out_of_service';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type WorkOrderStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type StockRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled';
+export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export interface Profile {
   id: string;
@@ -58,6 +62,19 @@ export interface Driver {
   profile?: Profile;
 }
 
+export interface Station {
+  id: string;
+  name: string;
+  code?: string;
+  address?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Route {
   id: string;
   name: string;
@@ -71,6 +88,18 @@ export interface Route {
   updated_at: string;
 }
 
+export interface RouteStation {
+  id: string;
+  route_id: string;
+  station_id: string;
+  stop_order: number;
+  distance_from_origin_km?: number;
+  fare_from_origin?: number;
+  estimated_time_minutes?: number;
+  created_at: string;
+  station?: Station;
+}
+
 export interface RouteStop {
   id: string;
   route_id: string;
@@ -81,6 +110,17 @@ export interface RouteStop {
   fare_from_origin?: number;
   latitude?: number;
   longitude?: number;
+  created_at: string;
+}
+
+export interface Seat {
+  id: string;
+  bus_id: string;
+  seat_number: string;
+  seat_type?: string;
+  seat_row?: number;
+  deck?: number;
+  is_available?: boolean;
   created_at: string;
 }
 
@@ -144,6 +184,31 @@ export interface Booking {
   trip?: Trip;
 }
 
+export interface Payment {
+  id: string;
+  booking_id: string;
+  amount: number;
+  payment_method?: string;
+  transaction_id?: string;
+  status: PaymentStatus;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+  booking?: Booking;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface InventoryCategory {
   id: string;
   name: string;
@@ -154,6 +219,7 @@ export interface InventoryCategory {
 export interface InventoryItem {
   id: string;
   category_id?: string;
+  supplier_id?: string;
   name: string;
   sku?: string;
   description?: string;
@@ -166,6 +232,35 @@ export interface InventoryItem {
   created_at: string;
   updated_at: string;
   category?: InventoryCategory;
+}
+
+export interface StockMovement {
+  id: string;
+  item_id: string;
+  movement_type: 'in' | 'out' | 'adjustment';
+  quantity: number;
+  reference_type?: string;
+  reference_id?: string;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  item?: InventoryItem;
+}
+
+export interface StockRequest {
+  id: string;
+  requested_by: string;
+  item_id: string;
+  quantity_requested: number;
+  quantity_approved?: number;
+  status: StockRequestStatus;
+  work_order_id?: string;
+  notes?: string;
+  approved_by?: string;
+  fulfilled_at?: string;
+  created_at: string;
+  updated_at: string;
+  item?: InventoryItem;
 }
 
 export interface MaintenanceRecord {
@@ -209,6 +304,55 @@ export interface PartsUsage {
   issued_by?: string;
   issued_at: string;
   item?: InventoryItem;
+}
+
+export interface Complaint {
+  id: string;
+  user_id: string;
+  booking_id?: string;
+  trip_id?: string;
+  category?: string;
+  subject: string;
+  description?: string;
+  status: ComplaintStatus;
+  priority?: string;
+  assigned_to?: string;
+  resolution?: string;
+  resolved_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Incident {
+  id: string;
+  driver_id: string;
+  trip_id?: string;
+  bus_id?: string;
+  incident_type: string;
+  severity: IncidentSeverity;
+  description: string;
+  location_description?: string;
+  latitude?: number;
+  longitude?: number;
+  reported_at: string;
+  status?: string;
+  resolution?: string;
+  resolved_at?: string;
+  created_at: string;
+  updated_at: string;
+  driver?: Driver;
+  bus?: Bus;
+}
+
+export interface Message {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  subject?: string;
+  body: string;
+  is_read?: boolean;
+  sent_at: string;
+  created_at: string;
 }
 
 export interface Transaction {
