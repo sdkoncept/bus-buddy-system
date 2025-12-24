@@ -66,9 +66,12 @@ export function useCreateBooking() {
       alighting_stop_id?: string;
       payment_method?: string;
     }) => {
+      // Generate a unique booking number
+      const booking_number = `BK${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      
       const { data, error } = await supabase
         .from('bookings')
-        .insert(booking)
+        .insert({ ...booking, booking_number })
         .select()
         .single();
       
