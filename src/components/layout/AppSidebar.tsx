@@ -30,6 +30,7 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Headphones,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -51,6 +52,7 @@ const menuItems = {
     { title: 'Maintenance', url: '/maintenance', icon: Wrench },
     { title: 'Inventory', url: '/inventory', icon: Package },
     { title: 'Accounts', url: '/accounts', icon: DollarSign },
+    { title: 'Customer Service', url: '/customer-service', icon: Headphones },
     { title: 'Reports', url: '/reports', icon: BarChart3 },
     { title: 'Settings', url: '/settings', icon: Settings },
   ],
