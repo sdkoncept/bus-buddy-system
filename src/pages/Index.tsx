@@ -81,8 +81,8 @@ const Index = () => {
           </div>
           
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Modern Bus Management
-            <span className="block gradient-text">Made Simple</span>
+            Welcome to
+            <span className="block gradient-text">Eagle Line Transport Company</span>
           </h1>
           
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
