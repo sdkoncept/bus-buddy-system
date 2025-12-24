@@ -206,6 +206,72 @@ export type Database = {
           },
         ]
       }
+      complaints: {
+        Row: {
+          assigned_to: string | null
+          booking_id: string | null
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          priority: string | null
+          resolution: string | null
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["complaint_status"]
+          subject: string
+          trip_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          booking_id?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["complaint_status"]
+          subject: string
+          trip_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          booking_id?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["complaint_status"]
+          subject?: string
+          trip_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaints_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           address: string | null
@@ -257,6 +323,85 @@ export type Database = {
         }
         Relationships: []
       }
+      incidents: {
+        Row: {
+          bus_id: string | null
+          created_at: string
+          description: string
+          driver_id: string
+          id: string
+          incident_type: string
+          latitude: number | null
+          location_description: string | null
+          longitude: number | null
+          reported_at: string
+          resolution: string | null
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["incident_severity"]
+          status: string | null
+          trip_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bus_id?: string | null
+          created_at?: string
+          description: string
+          driver_id: string
+          id?: string
+          incident_type: string
+          latitude?: number | null
+          location_description?: string | null
+          longitude?: number | null
+          reported_at?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          status?: string | null
+          trip_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bus_id?: string | null
+          created_at?: string
+          description?: string
+          driver_id?: string
+          id?: string
+          incident_type?: string
+          latitude?: number | null
+          location_description?: string | null
+          longitude?: number | null
+          reported_at?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          status?: string | null
+          trip_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_bus_id_fkey"
+            columns: ["bus_id"]
+            isOneToOne: false
+            referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_categories: {
         Row: {
           created_at: string
@@ -290,6 +435,7 @@ export type Database = {
           quantity: number
           sku: string | null
           supplier: string | null
+          supplier_id: string | null
           unit: string | null
           unit_cost: number | null
           updated_at: string
@@ -305,6 +451,7 @@ export type Database = {
           quantity?: number
           sku?: string | null
           supplier?: string | null
+          supplier_id?: string | null
           unit?: string | null
           unit_cost?: number | null
           updated_at?: string
@@ -320,6 +467,7 @@ export type Database = {
           quantity?: number
           sku?: string | null
           supplier?: string | null
+          supplier_id?: string | null
           unit?: string | null
           unit_cost?: number | null
           updated_at?: string
@@ -330,6 +478,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -397,6 +552,39 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          from_user_id: string
+          id: string
+          is_read: boolean | null
+          sent_at: string
+          subject: string | null
+          to_user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          from_user_id: string
+          id?: string
+          is_read?: boolean | null
+          sent_at?: string
+          subject?: string | null
+          to_user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          is_read?: boolean | null
+          sent_at?: string
+          subject?: string | null
+          to_user_id?: string
+        }
+        Relationships: []
+      }
       parts_usage: {
         Row: {
           id: string
@@ -435,6 +623,50 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          payment_method: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -521,6 +753,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      route_stations: {
+        Row: {
+          created_at: string
+          distance_from_origin_km: number | null
+          estimated_time_minutes: number | null
+          fare_from_origin: number | null
+          id: string
+          route_id: string
+          station_id: string
+          stop_order: number
+        }
+        Insert: {
+          created_at?: string
+          distance_from_origin_km?: number | null
+          estimated_time_minutes?: number | null
+          fare_from_origin?: number | null
+          id?: string
+          route_id: string
+          station_id: string
+          stop_order: number
+        }
+        Update: {
+          created_at?: string
+          distance_from_origin_km?: number | null
+          estimated_time_minutes?: number | null
+          fare_from_origin?: number | null
+          id?: string
+          route_id?: string
+          station_id?: string
+          stop_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_stations_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_stations_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       route_stops: {
         Row: {
@@ -674,6 +954,226 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seats: {
+        Row: {
+          bus_id: string
+          created_at: string
+          deck: number | null
+          id: string
+          is_available: boolean | null
+          seat_number: string
+          seat_row: number | null
+          seat_type: string | null
+        }
+        Insert: {
+          bus_id: string
+          created_at?: string
+          deck?: number | null
+          id?: string
+          is_available?: boolean | null
+          seat_number: string
+          seat_row?: number | null
+          seat_type?: string | null
+        }
+        Update: {
+          bus_id?: string
+          created_at?: string
+          deck?: number | null
+          id?: string
+          is_available?: boolean | null
+          seat_number?: string
+          seat_row?: number | null
+          seat_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seats_bus_id_fkey"
+            columns: ["bus_id"]
+            isOneToOne: false
+            referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stations: {
+        Row: {
+          address: string | null
+          city: string | null
+          code: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          item_id: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_requests: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          fulfilled_at: string | null
+          id: string
+          item_id: string
+          notes: string | null
+          quantity_approved: number | null
+          quantity_requested: number
+          requested_by: string
+          status: Database["public"]["Enums"]["stock_request_status"]
+          updated_at: string
+          work_order_id: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          fulfilled_at?: string | null
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity_approved?: number | null
+          quantity_requested: number
+          requested_by: string
+          status?: Database["public"]["Enums"]["stock_request_status"]
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          fulfilled_at?: string | null
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity_approved?: number | null
+          quantity_requested?: number
+          requested_by?: string
+          status?: Database["public"]["Enums"]["stock_request_status"]
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_requests_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_requests_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -906,11 +1406,15 @@ export type Database = {
         | "accounts"
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"
       bus_status: "active" | "maintenance" | "out_of_service"
+      complaint_status: "open" | "in_progress" | "resolved" | "closed"
+      incident_severity: "low" | "medium" | "high" | "critical"
       maintenance_status:
         | "scheduled"
         | "in_progress"
         | "completed"
         | "cancelled"
+      payment_status: "pending" | "completed" | "failed" | "refunded"
+      stock_request_status: "pending" | "approved" | "rejected" | "fulfilled"
       work_order_status:
         | "pending"
         | "assigned"
@@ -1055,12 +1559,16 @@ export const Constants = {
       ],
       booking_status: ["pending", "confirmed", "cancelled", "completed"],
       bus_status: ["active", "maintenance", "out_of_service"],
+      complaint_status: ["open", "in_progress", "resolved", "closed"],
+      incident_severity: ["low", "medium", "high", "critical"],
       maintenance_status: [
         "scheduled",
         "in_progress",
         "completed",
         "cancelled",
       ],
+      payment_status: ["pending", "completed", "failed", "refunded"],
+      stock_request_status: ["pending", "approved", "rejected", "fulfilled"],
       work_order_status: [
         "pending",
         "assigned",
