@@ -54,7 +54,7 @@ const Index = () => {
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <Bus className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">SD Koncept BMS</span>
+              <span className="text-xl font-bold">Eagle Line Transport</span>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="ghost" asChild>
@@ -166,7 +166,7 @@ const Index = () => {
                     <div className="w-24 h-24 mx-auto rounded-2xl gradient-primary flex items-center justify-center mb-6">
                       <Bus className="h-12 w-12 text-primary-foreground" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">SD Koncept BMS</h3>
+                    <h3 className="text-2xl font-bold mb-2">Eagle Line Transport</h3>
                     <p className="text-muted-foreground">Your Complete Bus Management Solution</p>
                   </div>
                 </div>
@@ -211,10 +211,10 @@ const Index = () => {
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Bus className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold">SD Koncept BMS</span>
+              <span className="font-semibold">Eagle Line Transport</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} SD Koncept. All rights reserved.
+              © {new Date().getFullYear()} Eagle Line Transport Company. All rights reserved.
             </p>
           </div>
         </div>
