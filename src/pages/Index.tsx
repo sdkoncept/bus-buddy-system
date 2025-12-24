@@ -80,8 +80,8 @@ const Index = () => {
             <span className="text-sm font-medium">Trusted by transport companies across Nigeria</span>
           </div>
           
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            <span className="gradient-text">Welcome to Eagle Line Transport Company</span>
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6 w-full">
+            <span className="gradient-text block text-center">Welcome to Eagle Line Transport Company</span>
           </h1>
           
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
