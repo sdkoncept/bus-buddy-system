@@ -12,6 +12,7 @@ import { useRoutes } from '@/hooks/useRoutes';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/currency';
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
@@ -203,7 +204,7 @@ export default function MyBookingsPage() {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground">Total Fare</p>
-                        <p className="text-xl font-bold text-primary">${booking.total_fare}</p>
+                        <p className="text-xl font-bold text-primary">{formatCurrency(booking.total_fare)}</p>
                         <p className="text-xs text-muted-foreground">
                           {booking.passenger_count} passenger{booking.passenger_count > 1 ? 's' : ''}
                         </p>

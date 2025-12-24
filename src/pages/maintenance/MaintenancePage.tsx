@@ -11,8 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Wrench, Search, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Wrench, Search, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/currency';
 
 export default function MaintenancePage() {
   const { data: records, isLoading: recordsLoading } = useMaintenanceRecords();
@@ -121,10 +122,10 @@ export default function MaintenancePage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <Wrench className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totalCost.toFixed(2)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(totalCost)}</div>
               </CardContent>
             </Card>
           </div>
@@ -265,7 +266,7 @@ export default function MaintenancePage() {
                       <TableCell className="font-medium">{record.bus?.registration_number || '-'}</TableCell>
                       <TableCell>{record.type}</TableCell>
                       <TableCell>{format(new Date(record.scheduled_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>${record.cost?.toFixed(2) || '0.00'}</TableCell>
+                      <TableCell>{record.cost ? formatCurrency(record.cost) : '₦0.00'}</TableCell>
                       <TableCell>{record.odometer_reading?.toLocaleString() || '-'}</TableCell>
                       <TableCell>{getStatusBadge(record.status)}</TableCell>
                     </TableRow>

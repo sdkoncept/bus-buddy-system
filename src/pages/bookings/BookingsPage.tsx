@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Ticket, Search, DollarSign, Users, XCircle } from 'lucide-react';
+import { Ticket, Search, Users, XCircle, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/currency';
 
 export default function BookingsPage() {
   const { data: bookings, isLoading } = useBookings();
@@ -71,10 +72,10 @@ export default function BookingsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -128,7 +129,7 @@ export default function BookingsPage() {
                   <TableCell>{booking.trip?.route?.name || '-'}</TableCell>
                   <TableCell>{booking.passenger_count}</TableCell>
                   <TableCell>{booking.seat_numbers?.join(', ') || '-'}</TableCell>
-                  <TableCell>${booking.total_fare.toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(booking.total_fare)}</TableCell>
                   <TableCell>{format(new Date(booking.booked_at), 'MMM d, yyyy HH:mm')}</TableCell>
                   <TableCell>{getStatusBadge(booking.status)}</TableCell>
                   <TableCell className="text-right">
