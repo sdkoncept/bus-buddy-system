@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRoutes, useCreateRoute, useUpdateRoute, useStations, useCreateStation } from '@/hooks/useRoutes';
+import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -170,7 +171,7 @@ export default function RoutesPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  ${routes?.length ? (routes.reduce((sum, r) => sum + r.base_fare, 0) / routes.length).toFixed(2) : '0'}
+                  {formatCurrency(routes?.length ? routes.reduce((sum, r) => sum + r.base_fare, 0) / routes.length : 0)}
                 </div>
               </CardContent>
             </Card>
@@ -241,7 +242,7 @@ export default function RoutesPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="base_fare">Base Fare ($)</Label>
+                            <Label htmlFor="base_fare">Base Fare (₦)</Label>
                             <Input
                               id="base_fare"
                               type="number"
@@ -314,7 +315,7 @@ export default function RoutesPage() {
                       <TableCell>{route.destination}</TableCell>
                       <TableCell>{route.distance_km} km</TableCell>
                       <TableCell>{route.estimated_duration_minutes} min</TableCell>
-                      <TableCell>${route.base_fare.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(route.base_fare)}</TableCell>
                       <TableCell>
                         <Badge variant={route.is_active ? 'default' : 'secondary'}>
                           {route.is_active ? 'Active' : 'Inactive'}
