@@ -57,15 +57,15 @@ const Index = () => {
               <span className="text-xl font-bold">Eagle Line</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
-              <Link to="/book-ticket" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/auth" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Book Ticket
               </Link>
-              <Link to="#routes" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <a href="#routes" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Routes & Prices
-              </Link>
-              <Link to="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              </a>
+              <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Contact Us
-              </Link>
+              </a>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="ghost" asChild>
@@ -167,7 +167,7 @@ const Index = () => {
           
           <div className="text-center mt-8">
             <Button variant="outline" size="lg" asChild>
-              <Link to="/book-ticket">View All Routes</Link>
+              <Link to="/auth">View All Routes</Link>
             </Button>
           </div>
         </div>
@@ -215,7 +215,7 @@ const Index = () => {
                 Book your bus ticket now and enjoy a comfortable journey to your destination.
               </p>
               <Button size="lg" className="h-12 px-8 gradient-primary hover:opacity-90" asChild>
-                <Link to="/book-ticket">Book Now</Link>
+                <Link to="/auth">Book Now</Link>
               </Button>
             </div>
           </div>
@@ -238,13 +238,13 @@ const Index = () => {
                 Your trusted partner for safe, comfortable, and affordable road travel across Nigeria.
               </p>
               <div className="flex gap-4">
-                <a href="#" className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center hover:bg-primary transition-colors">
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center hover:bg-primary transition-colors">
                   <Facebook className="h-5 w-5" />
                 </a>
-                <a href="#" className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center hover:bg-primary transition-colors">
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center hover:bg-primary transition-colors">
                   <Twitter className="h-5 w-5" />
                 </a>
-                <a href="#" className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center hover:bg-primary transition-colors">
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center hover:bg-primary transition-colors">
                   <Instagram className="h-5 w-5" />
                 </a>
               </div>
@@ -254,7 +254,7 @@ const Index = () => {
             <div>
               <h3 className="font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-2 text-sidebar-foreground/70">
-                <li><Link to="/book-ticket" className="hover:text-primary transition-colors">Book a Ticket</Link></li>
+                <li><Link to="/auth" className="hover:text-primary transition-colors">Book a Ticket</Link></li>
                 <li><Link to="/auth" className="hover:text-primary transition-colors">Check Booking</Link></li>
                 <li><Link to="/auth" className="hover:text-primary transition-colors">Hire a Bus</Link></li>
                 <li><Link to="/auth" className="hover:text-primary transition-colors">My Account</Link></li>
