@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useInventoryItems, useCreateInventoryItem, useSuppliers, useCreateSupplier, useInventoryCategories } from '@/hooks/useInventory';
+import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -137,7 +138,7 @@ export default function InventoryPage() {
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totalValue.toFixed(2)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
               </CardContent>
             </Card>
             <Card>
@@ -309,7 +310,7 @@ export default function InventoryPage() {
                       <TableCell>
                         {item.quantity} {item.unit}
                       </TableCell>
-                      <TableCell>${item.unit_cost?.toFixed(2) || '0.00'}</TableCell>
+                      <TableCell>{formatCurrency(item.unit_cost)}</TableCell>
                       <TableCell>{item.location || '-'}</TableCell>
                       <TableCell>
                         <Badge variant={item.quantity <= (item.min_quantity || 5) ? 'destructive' : 'default'}>
