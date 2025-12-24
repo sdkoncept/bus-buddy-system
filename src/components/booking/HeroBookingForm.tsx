@@ -34,12 +34,13 @@ const HeroBookingForm = () => {
     if (departureDate) params.set('date', format(departureDate, 'yyyy-MM-dd'));
     if (adults) params.set('passengers', adults.toString());
     
-    navigate(`/book-ticket?${params.toString()}`);
+    // Redirect to auth, after login user goes to /book with params
+    navigate(`/auth?redirect=/book&${params.toString()}`);
   };
 
   const handleCheckBooking = () => {
     if (bookingNumber) {
-      navigate(`/my-bookings?search=${bookingNumber}`);
+      navigate(`/auth?redirect=/my-bookings&search=${bookingNumber}`);
     }
   };
 
