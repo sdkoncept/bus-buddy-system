@@ -33,6 +33,7 @@ import {
   Headphones,
   Building2,
   FileText,
+  UserCog,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ import {
 const menuItems = {
   admin: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'User Management', url: '/users', icon: UserCog },
     { title: 'Fleet Management', url: '/fleet', icon: Bus },
     { title: 'Drivers', url: '/drivers', icon: Users },
     { title: 'Stations', url: '/stations', icon: Building2 },

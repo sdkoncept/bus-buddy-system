@@ -26,6 +26,7 @@ import ReportsPage from "./pages/reports/ReportsPage";
 import TrackingPage from "./pages/tracking/TrackingPage";
 import StationsPage from "./pages/stations/StationsPage";
 import JobCardsPage from "./pages/mechanic/JobCardsPage";
+import UserManagementPage from "./pages/admin/UserManagementPage";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,13 @@ const App = () => (
               {/* Dashboard - accessible by all authenticated users */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<SettingsPage />} />
+              
+              {/* Admin only routes */}
+              <Route path="/users" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <UserManagementPage />
+                </ProtectedRoute>
+              } />
               
               {/* Admin & Staff routes */}
               <Route path="/fleet" element={
