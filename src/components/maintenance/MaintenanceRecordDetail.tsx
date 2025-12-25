@@ -127,8 +127,7 @@ export function MaintenanceRecordDetail({ record, onClose, isDialog = true }: Ma
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <div>
             <div>
               <p className="text-muted-foreground">Cost</p>
               <p className="font-medium">{formatCurrency(record.cost || 0)}</p>
