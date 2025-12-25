@@ -16,6 +16,7 @@ import {
   Bus
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { sampleCurrentTrip, samplePassengers } from '@/data/sampleDriverData';
 
 interface TripWithPassengers {
   id: string;
@@ -107,7 +108,11 @@ export default function DriverPassengersPage() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const filteredBookings = currentTrip?.bookings.filter(booking =>
+  // Use sample data if no real trip exists
+  const displayTrip = currentTrip || sampleCurrentTrip as unknown as TripWithPassengers;
+  const hasRealData = !!currentTrip;
+
+  const filteredBookings = displayTrip?.bookings.filter(booking =>
     booking.booking_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     booking.seat_numbers.some(seat => seat.toString().includes(searchTerm))
   ) || [];
@@ -124,30 +129,16 @@ export default function DriverPassengersPage() {
     );
   }
 
-  if (!currentTrip) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Passenger Manifest</h1>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No active trip</h3>
-            <p className="text-muted-foreground text-center">
-              You don't have any scheduled or in-progress trips today
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Passenger Manifest</h1>
         <p className="text-muted-foreground">
-          {currentTrip.route?.origin} → {currentTrip.route?.destination}
+          {displayTrip.route?.origin} → {displayTrip.route?.destination}
         </p>
+        {!hasRealData && (
+          <Badge variant="outline" className="mt-2">Sample Data</Badge>
+        )}
       </div>
 
       {/* Trip Info Card */}
@@ -159,15 +150,15 @@ export default function DriverPassengersPage() {
                 <Bus className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">{currentTrip.bus?.registration_number}</p>
+                <p className="font-semibold">{displayTrip.bus?.registration_number}</p>
                 <p className="text-sm text-muted-foreground">
-                  Departure: {currentTrip.departure_time}
+                  Departure: {displayTrip.departure_time}
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <Badge className={currentTrip.status === 'in_progress' ? 'bg-info text-info-foreground' : ''}>
-                {currentTrip.status === 'in_progress' ? 'In Progress' : 'Scheduled'}
+              <Badge className={displayTrip.status === 'in_progress' ? 'bg-info text-info-foreground' : ''}>
+                {displayTrip.status === 'in_progress' ? 'In Progress' : 'Scheduled'}
               </Badge>
             </div>
           </div>
