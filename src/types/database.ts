@@ -4,7 +4,7 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type WorkOrderStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
-export type StockRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled';
+export type StockRequestStatus = 'pending' | 'approved' | 'admin_approved' | 'rejected' | 'fulfilled';
 export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 
