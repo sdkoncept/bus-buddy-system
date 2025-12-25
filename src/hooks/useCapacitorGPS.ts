@@ -121,7 +121,10 @@ export function useCapacitorGPS({
 
   // Start tracking
   const startTracking = useCallback(async () => {
+    console.log('[CapacitorGPS] startTracking called', { busId, tripId, isTracking });
+    
     if (!busId) {
+      console.log('[CapacitorGPS] No bus ID, cannot start tracking');
       setError('No bus assigned');
       return;
     }
@@ -205,14 +208,19 @@ export function useCapacitorGPS({
 
   // Auto-start/stop based on enabled prop
   useEffect(() => {
+    console.log('[CapacitorGPS] Auto-start/stop effect', { enabled, busId, isTracking });
+    
     if (enabled && busId && !isTracking) {
+      console.log('[CapacitorGPS] Auto-starting tracking');
       startTracking();
     } else if (!enabled && isTracking) {
+      console.log('[CapacitorGPS] Auto-stopping tracking');
       stopTracking();
     }
 
     return () => {
       if (watchIdRef.current) {
+        console.log('[CapacitorGPS] Cleanup: clearing watch');
         Geolocation.clearWatch({ id: watchIdRef.current }).catch(console.error);
       }
     };

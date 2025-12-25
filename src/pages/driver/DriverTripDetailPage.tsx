@@ -96,15 +96,21 @@ export default function DriverTripDetailPage() {
 
   const handleStartTrip = async () => {
     if (!id) return;
+    console.log('[DriverTripDetailPage] Starting trip:', id);
     await startTrip.mutateAsync(id);
     setShowStartDialog(false);
+    // Explicitly start GPS tracking after trip starts
+    console.log('[DriverTripDetailPage] Trip started, starting GPS tracking...');
+    startTracking();
   };
 
   const handleEndTrip = async () => {
     if (!id) return;
+    console.log('[DriverTripDetailPage] Ending trip:', id);
     stopTracking();
     await endTrip.mutateAsync(id);
     setShowEndDialog(false);
+    console.log('[DriverTripDetailPage] Trip ended, GPS tracking stopped');
   };
 
   const getStatusBadge = (status: string | null) => {
