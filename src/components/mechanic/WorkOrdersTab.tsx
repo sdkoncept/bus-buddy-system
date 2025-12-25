@@ -1,4 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,9 +10,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useJobCardWorkOrders, useUpdateWorkOrder } from '@/hooks/useMaintenance';
-import { WorkOrderStatus } from '@/types/database';
+import { WorkOrder, WorkOrderStatus } from '@/types/database';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
-import { ClipboardList, Calendar, Loader2 } from 'lucide-react';
+import { EditWorkOrderDialog } from './EditWorkOrderDialog';
+import { ClipboardList, Calendar, Loader2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface WorkOrdersTabProps {
@@ -37,6 +39,7 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
 export function WorkOrdersTab({ jobCardId, busId }: WorkOrdersTabProps) {
   const { data: workOrders, isLoading } = useJobCardWorkOrders(jobCardId);
   const updateWorkOrder = useUpdateWorkOrder();
+  const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
 
   const handleStatusChange = async (workOrderId: string, newStatus: WorkOrderStatus) => {
     await updateWorkOrder.mutateAsync({
@@ -105,6 +108,13 @@ export function WorkOrdersTab({ jobCardId, busId }: WorkOrdersTabProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditingWorkOrder(workOrder)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Select
                       value={workOrder.status}
                       onValueChange={(v) => handleStatusChange(workOrder.id, v as WorkOrderStatus)}
@@ -137,6 +147,14 @@ export function WorkOrdersTab({ jobCardId, busId }: WorkOrdersTabProps) {
             <CreateWorkOrderDialog jobCardId={jobCardId} busId={busId} />
           </CardContent>
         </Card>
+      )}
+
+      {editingWorkOrder && (
+        <EditWorkOrderDialog
+          workOrder={editingWorkOrder}
+          open={!!editingWorkOrder}
+          onOpenChange={(open) => !open && setEditingWorkOrder(null)}
+        />
       )}
     </div>
   );

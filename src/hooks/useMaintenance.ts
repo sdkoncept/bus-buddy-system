@@ -85,7 +85,8 @@ export function useWorkOrders() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as WorkOrder[];
+      // Cast to include job_card_id from the database
+      return data as (WorkOrder & { job_card_id?: string })[];
     },
   });
 }
