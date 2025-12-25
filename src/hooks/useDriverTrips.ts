@@ -83,18 +83,20 @@ export function useStartTrip() {
 
   return useMutation({
     mutationFn: async (tripId: string) => {
+      const now = new Date();
+      const timeStr = now.toTimeString().slice(0, 8); // HH:MM:SS format
+      
       const { data, error } = await supabase
         .from('trips')
         .update({
           status: 'in_progress',
-          actual_departure_time: new Date().toISOString(),
+          actual_departure_time: timeStr,
         })
         .eq('id', tripId)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      return data?.[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
@@ -111,18 +113,20 @@ export function useEndTrip() {
 
   return useMutation({
     mutationFn: async (tripId: string) => {
+      const now = new Date();
+      const timeStr = now.toTimeString().slice(0, 8); // HH:MM:SS format
+      
       const { data, error } = await supabase
         .from('trips')
         .update({
           status: 'completed',
-          actual_arrival_time: new Date().toISOString(),
+          actual_arrival_time: timeStr,
         })
         .eq('id', tripId)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      return data?.[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
