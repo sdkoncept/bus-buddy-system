@@ -117,7 +117,7 @@ export default function SettingsPage() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+1 (555) 123-4567"
+                placeholder="+234 803 123 4567"
               />
             </div>
           </div>

@@ -114,7 +114,7 @@ export default function DriversPage() {
                     id="license"
                     value={formData.license_number}
                     onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                    placeholder="DL-12345678"
+                    placeholder="LAG-12345678"
                     required
                   />
                 </div>
@@ -135,7 +135,7 @@ export default function DriversPage() {
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="123 Street, City"
+                  placeholder="15 Awolowo Road, Ikeja, Lagos"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -145,7 +145,7 @@ export default function DriversPage() {
                     id="emergency_contact"
                     value={formData.emergency_contact}
                     onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
-                    placeholder="Name"
+                    placeholder="Full Name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -154,7 +154,7 @@ export default function DriversPage() {
                     id="emergency_phone"
                     value={formData.emergency_phone}
                     onChange={(e) => setFormData({ ...formData, emergency_phone: e.target.value })}
-                    placeholder="555-0100"
+                    placeholder="0803 123 4567"
                   />
                 </div>
               </div>
