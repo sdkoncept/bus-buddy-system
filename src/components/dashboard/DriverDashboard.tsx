@@ -317,7 +317,7 @@ export function DriverDashboard() {
                 <div className="p-4 rounded-full bg-success/10 mb-4">
                   <CheckCircle2 className="h-8 w-8 text-success" />
                 </div>
-                <h3 className="font-semibold mb-1">All vehicles operational</h3>
+                <h3 className="font-semibold mb-1">My vehicle is operational</h3>
                 <p className="text-sm text-muted-foreground">
                   No ongoing maintenance for your assigned vehicles
                 </p>
