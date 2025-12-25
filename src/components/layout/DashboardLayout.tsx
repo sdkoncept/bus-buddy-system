@@ -6,6 +6,7 @@ import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Loader2 } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 export function DashboardLayout() {
   const { user, loading } = useAuth();
@@ -47,6 +48,9 @@ export function DashboardLayout() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+            <div className="ml-auto">
+              <NotificationBell />
+            </div>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto">
             <Outlet />

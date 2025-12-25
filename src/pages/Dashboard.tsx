@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bus, Users, Route, Ticket, DollarSign, Wrench, TrendingUp, AlertTriangle } from 'lucide-react';
+import { PendingApprovalsWidget } from '@/components/dashboard/PendingApprovalsWidget';
 
 const stats = [
   { title: 'Total Buses', value: '12', icon: Bus, color: 'text-primary', change: '+2 this month' },
@@ -47,6 +48,9 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Pending Approvals Widget - for admin and storekeeper */}
+      <PendingApprovalsWidget />
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Activity */}
