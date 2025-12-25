@@ -17,6 +17,8 @@ const testUsers: TestUser[] = [
   { email: 'storekeeper@sdkoncept.com', password: 'Test1234!', full_name: 'Store Keeper', role: 'storekeeper' },
   { email: 'driver@sdkoncept.com', password: 'Test1234!', full_name: 'Driver User', role: 'driver' },
   { email: 'passenger@sdkoncept.com', password: 'Test1234!', full_name: 'Passenger User', role: 'passenger' },
+  { email: 'mechanic@sdkoncept.com', password: 'Test1234!', full_name: 'Mechanic User', role: 'mechanic' },
+  { email: 'accounts@sdkoncept.com', password: 'Test1234!', full_name: 'Accounts User', role: 'accounts' },
 ];
 
 Deno.serve(async (req) => {
