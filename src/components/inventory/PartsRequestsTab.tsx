@@ -436,9 +436,21 @@ export default function PartsRequestsTab() {
               )}
 
               {actionType === 'dispatch' && (
-                <p className="text-sm text-muted-foreground">
-                  This will deduct {selectedRequest.quantity_approved || selectedRequest.quantity_requested} units from inventory and dispatch to the mechanic.
-                </p>
+                <div className="space-y-3">
+                  {selectedRequest.notes && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                        Admin Notes:
+                      </p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        {selectedRequest.notes}
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    This will deduct {selectedRequest.quantity_approved || selectedRequest.quantity_requested} units from inventory and dispatch to the mechanic.
+                  </p>
+                </div>
               )}
 
               <DialogFooter>
