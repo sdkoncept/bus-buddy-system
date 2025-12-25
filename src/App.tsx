@@ -25,6 +25,7 @@ import SettingsPage from "./pages/settings/SettingsPage";
 import ReportsPage from "./pages/reports/ReportsPage";
 import TrackingPage from "./pages/tracking/TrackingPage";
 import StationsPage from "./pages/stations/StationsPage";
+import JobCardsPage from "./pages/mechanic/JobCardsPage";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,11 @@ const App = () => (
               <Route path="/parts-requests" element={
                 <ProtectedRoute allowedRoles={['admin', 'storekeeper', 'mechanic']}>
                   <InventoryPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/job-cards" element={
+                <ProtectedRoute allowedRoles={['admin', 'mechanic']}>
+                  <JobCardsPage />
                 </ProtectedRoute>
               } />
               

@@ -32,6 +32,7 @@ import {
   ChevronDown,
   Headphones,
   Building2,
+  FileText,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -80,6 +81,7 @@ const menuItems = {
   ],
   mechanic: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'Job Cards', url: '/job-cards', icon: FileText },
     { title: 'Work Orders', url: '/work-orders', icon: Wrench },
     { title: 'Maintenance', url: '/maintenance', icon: Bus },
     { title: 'Parts', url: '/inventory', icon: Package },
