@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Package, Search, AlertTriangle, Truck } from 'lucide-react';
+import { Plus, Package, Search, AlertTriangle, Truck, ClipboardList } from 'lucide-react';
+import PartsRequestsTab from '@/components/inventory/PartsRequestsTab';
 
 export default function InventoryPage() {
   const { data: items, isLoading: itemsLoading } = useInventoryItems();
@@ -109,6 +110,10 @@ export default function InventoryPage() {
         <TabsList>
           <TabsTrigger value="items">Inventory Items</TabsTrigger>
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+          <TabsTrigger value="requests" className="gap-1">
+            <ClipboardList className="h-4 w-4" />
+            Parts Requests
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="items" className="space-y-6">
@@ -432,6 +437,10 @@ export default function InventoryPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="requests">
+          <PartsRequestsTab />
         </TabsContent>
       </Tabs>
     </div>
