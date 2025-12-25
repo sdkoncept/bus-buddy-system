@@ -9,14 +9,21 @@ export function useMapboxToken() {
   useEffect(() => {
     async function fetchToken() {
       try {
-        // For now, we'll use a temporary input approach since the token 
-        // is stored in Edge Function secrets, not accessible from client
-        // In production, you'd call an edge function to get this
-        const storedToken = localStorage.getItem('mapbox_token');
-        if (storedToken) {
-          setToken(storedToken);
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        
+        if (error) {
+          console.error('Error fetching Mapbox token:', error);
+          setError('Failed to load Mapbox token');
+          return;
+        }
+
+        if (data?.token) {
+          setToken(data.token);
+        } else {
+          setError('Mapbox token not configured');
         }
       } catch (err) {
+        console.error('Error fetching Mapbox token:', err);
         setError('Failed to load Mapbox token');
       } finally {
         setLoading(false);
@@ -26,10 +33,5 @@ export function useMapboxToken() {
     fetchToken();
   }, []);
 
-  const saveToken = (newToken: string) => {
-    localStorage.setItem('mapbox_token', newToken);
-    setToken(newToken);
-  };
-
-  return { token, loading, error, saveToken };
+  return { token, loading, error };
 }
