@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,14 +32,17 @@ export default function TrackingPage() {
   const { data: buses } = useBuses();
   const { data: schedules } = useSchedules();
   const { data: routes } = useRoutes();
-  const { token: mapboxToken, loading: tokenLoading, error: tokenError } = useMapboxToken();
+  const { token: mapboxToken } = useMapboxToken();
   const { locations: realtimeLocations, isConnected } = useRealtimeBusLocations();
   
   const [selectedBus, setSelectedBus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [busLocations, setBusLocations] = useState<BusLocation[]>([]);
+  const [simulatedPositions, setSimulatedPositions] = useState<Map<string, { lat: number; lng: number; heading: number }>>(new Map());
 
-  const activeBuses = buses?.filter((b: any) => b.status === 'active') || [];
+  // Memoize active buses to prevent re-renders
+  const activeBuses = useMemo(() => {
+    return buses?.filter((b: any) => b.status === 'active') || [];
+  }, [buses]);
 
   const getRouteForBus = useCallback((busId: string) => {
     const schedule = schedules?.find((s: any) => s.bus_id === busId);
@@ -47,24 +50,49 @@ export default function TrackingPage() {
     return routes?.find((r: any) => r.id === schedule.route_id);
   }, [schedules, routes]);
 
-  // Combine realtime locations with bus data
+  // Initialize simulated positions once when buses change
   useEffect(() => {
     if (!activeBuses.length) return;
+    
+    setSimulatedPositions(prev => {
+      const newMap = new Map(prev);
+      let hasChanges = false;
+      
+      activeBuses.forEach((bus: any) => {
+        if (!newMap.has(bus.id)) {
+          // Initialize position for new bus
+          const baseLatOffset = (Math.random() - 0.5) * 0.15;
+          const baseLngOffset = (Math.random() - 0.5) * 0.15;
+          newMap.set(bus.id, {
+            lat: -1.2921 + baseLatOffset,
+            lng: 36.8219 + baseLngOffset,
+            heading: Math.floor(Math.random() * 360),
+          });
+          hasChanges = true;
+        }
+      });
+      
+      return hasChanges ? newMap : prev;
+    });
+  }, [activeBuses]);
 
-    const locations: BusLocation[] = activeBuses.map((bus: any) => {
+  // Combine realtime locations with bus data
+  const busLocations = useMemo((): BusLocation[] => {
+    return activeBuses.map((bus: any) => {
       const route = getRouteForBus(bus.id);
       const realtimeLoc = realtimeLocations.find((loc: any) => loc.bus_id === bus.id);
+      const simPos = simulatedPositions.get(bus.id);
       
-      // Use realtime location if available, otherwise simulate
+      // Use realtime location if available
       if (realtimeLoc) {
         return {
           id: bus.id,
           registration_number: bus.registration_number,
           model: bus.model,
-          lat: realtimeLoc.latitude,
-          lng: realtimeLoc.longitude,
-          speed: realtimeLoc.speed || 0,
-          heading: realtimeLoc.heading || 0,
+          lat: Number(realtimeLoc.latitude),
+          lng: Number(realtimeLoc.longitude),
+          speed: Number(realtimeLoc.speed) || 0,
+          heading: Number(realtimeLoc.heading) || 0,
           lastUpdate: realtimeLoc.recorded_at,
           route: route ? {
             name: route.name,
@@ -72,38 +100,38 @@ export default function TrackingPage() {
             destination: route.destination,
           } : undefined,
         };
-      } else {
-        // Fallback: simulate location for buses without GPS data
-        const baseLatOffset = (Math.random() - 0.5) * 0.15;
-        const baseLngOffset = (Math.random() - 0.5) * 0.15;
-        
-        return {
-          id: bus.id,
-          registration_number: bus.registration_number,
-          model: bus.model,
-          lat: -1.2921 + baseLatOffset,
-          lng: 36.8219 + baseLngOffset,
-          speed: Math.floor(Math.random() * 50) + 30,
-          heading: Math.floor(Math.random() * 360),
-          route: route ? {
-            name: route.name,
-            origin: route.origin,
-            destination: route.destination,
-          } : undefined,
-        };
       }
+      
+      // Fallback to simulated position
+      return {
+        id: bus.id,
+        registration_number: bus.registration_number,
+        model: bus.model,
+        lat: simPos?.lat || -1.2921,
+        lng: simPos?.lng || 36.8219,
+        speed: 45, // Fixed reasonable speed
+        heading: simPos?.heading || 0,
+        route: route ? {
+          name: route.name,
+          origin: route.origin,
+          destination: route.destination,
+        } : undefined,
+      };
     });
+  }, [activeBuses, realtimeLocations, simulatedPositions, getRouteForBus]);
 
-    setBusLocations(locations);
-  }, [activeBuses, realtimeLocations, getRouteForBus]);
-
-  const filteredBuses = busLocations.filter((bus) => 
-    bus.registration_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bus.model?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBuses = useMemo(() => {
+    return busLocations.filter((bus) => 
+      bus.registration_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bus.model?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [busLocations, searchTerm]);
 
   const selectedBusData = busLocations.find(b => b.id === selectedBus);
-  const hasRealtimeData = (busId: string) => realtimeLocations.some((loc: any) => loc.bus_id === busId);
+  const hasRealtimeData = useCallback((busId: string) => 
+    realtimeLocations.some((loc: any) => loc.bus_id === busId), 
+    [realtimeLocations]
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
