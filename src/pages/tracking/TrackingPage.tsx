@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { MapPin, Bus, Clock, Navigation, Search, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { MapPin, Bus, Clock, Navigation, Search, RefreshCw, Wifi, WifiOff, Route } from 'lucide-react';
 import { useBuses } from '@/hooks/useBuses';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useRoutes } from '@/hooks/useRoutes';
@@ -11,7 +11,9 @@ import { useMapboxToken } from '@/hooks/useMapboxToken';
 import { useRealtimeBusLocations } from '@/hooks/useGPSTracking';
 import MapboxMap from '@/components/tracking/MapboxMap';
 import GPSHealthIndicator from '@/components/tracking/GPSHealthIndicator';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BusLocation {
   id: string;
@@ -22,6 +24,13 @@ interface BusLocation {
   speed: number;
   heading: number;
   lastUpdate?: string;
+  isOnTrip?: boolean;
+  tripInfo?: {
+    routeName: string;
+    origin: string;
+    destination: string;
+    status: string;
+  };
   route?: {
     name: string;
     origin: string;
@@ -40,10 +49,44 @@ export default function TrackingPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [simulatedPositions, setSimulatedPositions] = useState<Map<string, { lat: number; lng: number; heading: number }>>(new Map());
 
+  // Fetch active trips to know which buses are on a trip
+  const { data: activeTrips } = useQuery({
+    queryKey: ['active-trips-tracking'],
+    queryFn: async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('trips')
+        .select(`
+          id,
+          bus_id,
+          status,
+          route:routes(name, origin, destination)
+        `)
+        .eq('trip_date', today)
+        .eq('status', 'in_progress');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
   // Memoize active buses to prevent re-renders
   const activeBuses = useMemo(() => {
     return buses?.filter((b: any) => b.status === 'active') || [];
   }, [buses]);
+
+  // Check if a bus is on an active trip
+  const getBusTripInfo = useCallback((busId: string) => {
+    const trip = activeTrips?.find((t: any) => t.bus_id === busId);
+    if (!trip) return null;
+    return {
+      routeName: trip.route?.name || 'Unknown Route',
+      origin: trip.route?.origin || '',
+      destination: trip.route?.destination || '',
+      status: trip.status,
+    };
+  }, [activeTrips]);
 
   const getRouteForBus = useCallback((busId: string) => {
     const schedule = schedules?.find((s: any) => s.bus_id === busId);
@@ -83,6 +126,7 @@ export default function TrackingPage() {
       const route = getRouteForBus(bus.id);
       const realtimeLoc = realtimeLocations.find((loc: any) => loc.bus_id === bus.id);
       const simPos = simulatedPositions.get(bus.id);
+      const tripInfo = getBusTripInfo(bus.id);
       
       // Use realtime location if available
       if (realtimeLoc) {
@@ -96,6 +140,8 @@ export default function TrackingPage() {
            speed: realtimeLoc.speed == null ? 0 : Number(realtimeLoc.speed),
            heading: Number(realtimeLoc.heading) || 0,
            lastUpdate: realtimeLoc.recorded_at,
+           isOnTrip: !!tripInfo,
+           tripInfo,
           route: route ? {
             name: route.name,
             origin: route.origin,
@@ -113,6 +159,8 @@ export default function TrackingPage() {
         lng: simPos?.lng || 3.3792,
         speed: 45, // Fixed reasonable speed
         heading: simPos?.heading || 0,
+        isOnTrip: !!tripInfo,
+        tripInfo,
         route: route ? {
           name: route.name,
           origin: route.origin,
@@ -120,7 +168,7 @@ export default function TrackingPage() {
         } : undefined,
       };
     });
-  }, [activeBuses, realtimeLocations, simulatedPositions, getRouteForBus]);
+  }, [activeBuses, realtimeLocations, simulatedPositions, getRouteForBus, getBusTripInfo]);
 
   const filteredBuses = useMemo(() => {
     return busLocations.filter((bus) => 
@@ -204,6 +252,16 @@ export default function TrackingPage() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold">{bus.registration_number}</span>
                       <div className="flex items-center gap-1">
+                        {bus.isOnTrip ? (
+                          <Badge variant="default" className="bg-primary text-xs">
+                            <Route className="h-3 w-3 mr-1" />
+                            On Trip
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            Idle
+                          </Badge>
+                        )}
                         {isRealtime ? (
                           <Badge variant="default" className="bg-success text-xs">
                             <Wifi className="h-3 w-3 mr-1" />
@@ -215,7 +273,13 @@ export default function TrackingPage() {
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">{bus.model}</p>
-                    {bus.route && (
+                    {bus.isOnTrip && bus.tripInfo && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-primary font-medium">
+                        <MapPin className="h-3 w-3" />
+                        {bus.tripInfo.origin} → {bus.tripInfo.destination}
+                      </div>
+                    )}
+                    {!bus.isOnTrip && bus.route && (
                       <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3" />
                         {bus.route.origin} → {bus.route.destination}
