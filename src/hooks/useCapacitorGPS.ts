@@ -198,13 +198,22 @@ export function useCapacitorGPS({
       const watchId = await Geolocation.watchPosition(
         {
           enableHighAccuracy: true,
-          timeout: 30000,
-          maximumAge: 10000,
+          timeout: 60000,
+          maximumAge: 0,
         },
         (position, err) => {
           if (err) {
+            const msg = err.message || 'Location error';
             console.error('[CapacitorGPS] Watch error:', err);
-            setError(err.message);
+
+            // Timeouts are common on some Android devices when GPS is still warming up.
+            // Keep tracking running; only surface as a non-blocking warning.
+            if (/timeout|obtain location/i.test(msg)) {
+              toast.message('Waiting for GPS signal…');
+              return;
+            }
+
+            setError(msg);
             return;
           }
           if (position) {
@@ -243,16 +252,32 @@ export function useCapacitorGPS({
   // Get current position once
   const getCurrentPosition = useCallback(async () => {
     try {
+      // Try high accuracy first
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
-        timeout: 30000,
+        timeout: 60000,
+        maximumAge: 0,
       });
       handlePositionUpdate(position);
       return position;
     } catch (err: any) {
-      console.error('[CapacitorGPS] Get position error:', err);
-      setError(err?.message || 'Failed to get current position');
-      return null;
+      const msg = err?.message || 'Failed to get current position';
+      console.error('[CapacitorGPS] Get position error (high accuracy):', err);
+
+      // Fallback: lower accuracy, longer cache window (helps on cold GPS start)
+      try {
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 60000,
+          maximumAge: 60000,
+        });
+        handlePositionUpdate(position);
+        return position;
+      } catch (err2: any) {
+        console.error('[CapacitorGPS] Get position error (fallback):', err2);
+        setError(msg);
+        return null;
+      }
     }
   }, [handlePositionUpdate]);
 
