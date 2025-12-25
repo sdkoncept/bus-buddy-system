@@ -12,18 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authorization header exists (JWT is validated by Supabase when verify_jwt = true)
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.warn('Unauthorized request - missing Authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
+    // This function returns a public Mapbox token.
+    // verify_jwt is disabled in config, so do not require auth headers here.
 
     const mapboxToken = Deno.env.get('MAPBOX_PUBLIC_TOKEN');
     
