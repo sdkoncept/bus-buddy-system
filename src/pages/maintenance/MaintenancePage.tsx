@@ -310,7 +310,9 @@ export default function MaintenancePage() {
           <Card>
             <CardHeader>
               <CardTitle>Work Orders</CardTitle>
-              <CardDescription>Active work orders for mechanics</CardDescription>
+              <CardDescription>
+                All work orders across job cards. To create or edit work orders, go to the linked job card.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -318,6 +320,7 @@ export default function MaintenancePage() {
                   <TableRow>
                     <TableHead>Title</TableHead>
                     <TableHead>Bus</TableHead>
+                    <TableHead>Job Card</TableHead>
                     <TableHead>Priority</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -329,8 +332,17 @@ export default function MaintenancePage() {
                       <TableCell className="font-medium">{order.title}</TableCell>
                       <TableCell>{order.bus?.registration_number || '-'}</TableCell>
                       <TableCell>
-                        <Badge variant={order.priority === 'high' ? 'destructive' : 'outline'}>
-                          {order.priority}
+                        {order.job_card_id ? (
+                          <Badge variant="outline" className="font-mono text-xs">
+                            Linked
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={order.priority === 'high' || order.priority === 'urgent' ? 'destructive' : 'outline'}>
+                          {order.priority || 'medium'}
                         </Badge>
                       </TableCell>
                       <TableCell>{order.due_date ? format(new Date(order.due_date), 'MMM d, yyyy') : '-'}</TableCell>
@@ -339,8 +351,8 @@ export default function MaintenancePage() {
                   ))}
                   {workOrders?.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No work orders found
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No work orders found. Work orders are created within job cards.
                       </TableCell>
                     </TableRow>
                   )}
