@@ -202,12 +202,18 @@ const StationsPage = () => {
   };
 
   const flyToStation = (station: any) => {
-    if (map.current && station.latitude && station.longitude) {
-      map.current.flyTo({
-        center: [station.longitude, station.latitude],
-        zoom: 14,
-        duration: 1500,
-      });
+    console.log('flyToStation called:', station.name, 'map.current:', !!map.current, 'coords:', station.latitude, station.longitude);
+    if (station.latitude && station.longitude) {
+      if (map.current) {
+        map.current.flyTo({
+          center: [station.longitude, station.latitude],
+          zoom: 14,
+          duration: 1500,
+        });
+      }
+      setSelectedStation(station);
+    } else {
+      // Still select even if no coordinates
       setSelectedStation(station);
     }
   };
