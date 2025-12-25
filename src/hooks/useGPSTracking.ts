@@ -32,17 +32,22 @@ export function useGPSTracking({
   const lastSentRef = useRef<number>(0);
 
   const sendLocation = useCallback(async (pos: GPSPosition) => {
+    console.log('[useGPSTracking] sendLocation called', { busId, tripId, pos });
+    
     if (!busId) {
-      console.log('No bus ID provided, skipping location update');
+      console.log('[useGPSTracking] No bus ID provided, skipping location update');
       return;
     }
 
     // Throttle updates
     const now = Date.now();
-    if (now - lastSentRef.current < updateIntervalMs) {
+    const timeSinceLastSent = now - lastSentRef.current;
+    if (timeSinceLastSent < updateIntervalMs) {
+      console.log(`[useGPSTracking] Throttling: ${timeSinceLastSent}ms since last send`);
       return;
     }
     lastSentRef.current = now;
+    console.log('[useGPSTracking] Sending location to backend...');
 
     try {
       const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
@@ -68,6 +73,8 @@ export function useGPSTracking({
   }, [busId, tripId, updateIntervalMs]);
 
   const startTracking = useCallback(() => {
+    console.log('[useGPSTracking] startTracking called', { busId, tripId, enabled });
+    
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       toast.error('Geolocation not supported');
@@ -75,12 +82,14 @@ export function useGPSTracking({
     }
 
     if (!busId) {
+      console.log('[useGPSTracking] No bus ID provided, cannot start tracking');
       setError('No bus assigned');
       return;
     }
 
     setError(null);
     setIsTracking(true);
+    console.log('[useGPSTracking] Starting geolocation watch...');
 
     // Watch position with high accuracy
     watchIdRef.current = navigator.geolocation.watchPosition(

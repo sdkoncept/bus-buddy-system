@@ -123,23 +123,34 @@ export default function DriverAppPage() {
 
   const handleStartTrip = async (tripId: string) => {
     try {
-      await startTripMutation.mutateAsync(tripId);
+      console.log('[DriverAppPage] Starting trip:', tripId);
+      // First set the trip ID so GPS hook has access to it
       setSelectedTripId(tripId);
+      await startTripMutation.mutateAsync(tripId);
+      // Enable GPS and explicitly start tracking after trip starts
+      console.log('[DriverAppPage] Trip started, enabling GPS tracking...');
       setGpsEnabled(true);
-      await startTracking();
+      // Small delay to ensure state is updated before starting tracking
+      setTimeout(async () => {
+        await startTracking();
+        console.log('[DriverAppPage] GPS tracking started');
+      }, 100);
     } catch (err) {
-      console.error('Failed to start trip:', err);
+      console.error('[DriverAppPage] Failed to start trip:', err);
+      setSelectedTripId(null);
     }
   };
 
   const handleEndTrip = async (tripId: string) => {
     try {
+      console.log('[DriverAppPage] Ending trip:', tripId);
       await stopTracking();
       setGpsEnabled(false);
       await endTripMutation.mutateAsync(tripId);
       setSelectedTripId(null);
+      console.log('[DriverAppPage] Trip ended, GPS tracking stopped');
     } catch (err) {
-      console.error('Failed to end trip:', err);
+      console.error('[DriverAppPage] Failed to end trip:', err);
     }
   };
 
