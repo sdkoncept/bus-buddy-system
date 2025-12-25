@@ -63,6 +63,143 @@ export const sampleTrips = [
   },
 ];
 
+// Individual passenger entries for the manifest
+export interface PassengerManifestEntry {
+  id: string;
+  firstName: string;
+  lastName: string;
+  seatNumber: number;
+  phone: string;
+  nextOfKinName: string;
+  nextOfKinPhone: string;
+  boardingStop: string;
+  alightingStop: string;
+}
+
+export const samplePassengerManifest: PassengerManifestEntry[] = [
+  {
+    id: 'pax-1',
+    firstName: 'Adebayo',
+    lastName: 'Okonkwo',
+    seatNumber: 5,
+    phone: '0803 456 7890',
+    nextOfKinName: 'Funke Okonkwo',
+    nextOfKinPhone: '0802 345 6789',
+    boardingStop: 'Lagos (Jibowu)',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-2',
+    firstName: 'Chioma',
+    lastName: 'Okonkwo',
+    seatNumber: 6,
+    phone: '0803 456 7891',
+    nextOfKinName: 'Funke Okonkwo',
+    nextOfKinPhone: '0802 345 6789',
+    boardingStop: 'Lagos (Jibowu)',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-3',
+    firstName: 'Emeka',
+    lastName: 'Nwosu',
+    seatNumber: 12,
+    phone: '0705 123 4567',
+    nextOfKinName: 'Grace Nwosu',
+    nextOfKinPhone: '0706 234 5678',
+    boardingStop: 'Lagos (Jibowu)',
+    alightingStop: 'Sagamu Junction',
+  },
+  {
+    id: 'pax-4',
+    firstName: 'Fatima',
+    lastName: 'Ibrahim',
+    seatNumber: 18,
+    phone: '0810 987 6543',
+    nextOfKinName: 'Ahmed Ibrahim',
+    nextOfKinPhone: '0811 876 5432',
+    boardingStop: 'Berger',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-5',
+    firstName: 'Yusuf',
+    lastName: 'Ibrahim',
+    seatNumber: 19,
+    phone: '0810 987 6544',
+    nextOfKinName: 'Ahmed Ibrahim',
+    nextOfKinPhone: '0811 876 5432',
+    boardingStop: 'Berger',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-6',
+    firstName: 'Amina',
+    lastName: 'Ibrahim',
+    seatNumber: 20,
+    phone: '0810 987 6545',
+    nextOfKinName: 'Ahmed Ibrahim',
+    nextOfKinPhone: '0811 876 5432',
+    boardingStop: 'Berger',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-7',
+    firstName: 'Oluwaseun',
+    lastName: 'Adeyemi',
+    seatNumber: 25,
+    phone: '0902 111 2222',
+    nextOfKinName: 'Biodun Adeyemi',
+    nextOfKinPhone: '0903 222 3333',
+    boardingStop: 'Lagos (Jibowu)',
+    alightingStop: 'Ibadan (Iwo Road)',
+  },
+  {
+    id: 'pax-8',
+    firstName: 'Ngozi',
+    lastName: 'Eze',
+    seatNumber: 30,
+    phone: '0814 555 6666',
+    nextOfKinName: 'Chidi Eze',
+    nextOfKinPhone: '0815 666 7777',
+    boardingStop: 'Mowe',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-9',
+    firstName: 'Kelechi',
+    lastName: 'Eze',
+    seatNumber: 31,
+    phone: '0814 555 6667',
+    nextOfKinName: 'Chidi Eze',
+    nextOfKinPhone: '0815 666 7777',
+    boardingStop: 'Mowe',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-10',
+    firstName: 'Obinna',
+    lastName: 'Eze',
+    seatNumber: 32,
+    phone: '0814 555 6668',
+    nextOfKinName: 'Chidi Eze',
+    nextOfKinPhone: '0815 666 7777',
+    boardingStop: 'Mowe',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+  {
+    id: 'pax-11',
+    firstName: 'Adaeze',
+    lastName: 'Eze',
+    seatNumber: 33,
+    phone: '0814 555 6669',
+    nextOfKinName: 'Chidi Eze',
+    nextOfKinPhone: '0815 666 7777',
+    boardingStop: 'Mowe',
+    alightingStop: 'Ibadan (Challenge)',
+  },
+];
+
 export const samplePassengers = [
   {
     id: 'booking-1',
@@ -174,6 +311,7 @@ export const sampleCurrentTrip = {
   },
   bus: {
     registration_number: 'LAG-234-XY',
+    capacity: 42,
   },
   bookings: samplePassengers,
 };

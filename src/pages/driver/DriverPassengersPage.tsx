@@ -4,21 +4,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { 
   Users, 
   Search, 
-  MapPin, 
-  Ticket,
-  UserCheck,
-  Bus
+  Bus,
+  Phone,
+  UserCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { sampleCurrentTrip, samplePassengers } from '@/data/sampleDriverData';
+import { sampleCurrentTrip, samplePassengerManifest, PassengerManifestEntry } from '@/data/sampleDriverData';
 
-interface TripWithPassengers {
+interface TripInfo {
   id: string;
   trip_date: string;
   departure_time: string;
@@ -30,25 +36,17 @@ interface TripWithPassengers {
   } | null;
   bus: {
     registration_number: string;
+    capacity: number;
   } | null;
-  bookings: {
-    id: string;
-    booking_number: string;
-    passenger_count: number;
-    seat_numbers: number[];
-    status: string;
-    boarding_stop: { stop_name: string } | null;
-    alighting_stop: { stop_name: string } | null;
-  }[];
 }
 
 export default function DriverPassengersPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch today's trip with passengers
+  // Fetch today's trip
   const { data: currentTrip, isLoading } = useQuery({
-    queryKey: ['driver-current-trip-passengers', user?.id],
+    queryKey: ['driver-current-trip', user?.id],
     queryFn: async () => {
       // Get driver ID
       const { data: driverData, error: driverError } = await supabase
@@ -70,7 +68,7 @@ export default function DriverPassengersPage() {
           departure_time,
           status,
           route:routes(name, origin, destination),
-          bus:buses(registration_number)
+          bus:buses(registration_number, capacity)
         `)
         .eq('driver_id', driverData.id)
         .eq('trip_date', today)
@@ -80,44 +78,42 @@ export default function DriverPassengersPage() {
         .maybeSingle();
 
       if (tripError) throw tripError;
-      if (!tripData) return null;
-
-      // Get passengers for this trip
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          booking_number,
-          passenger_count,
-          seat_numbers,
-          status,
-          boarding_stop:route_stops!bookings_boarding_stop_id_fkey(stop_name),
-          alighting_stop:route_stops!bookings_alighting_stop_id_fkey(stop_name)
-        `)
-        .eq('trip_id', tripData.id)
-        .in('status', ['confirmed', 'completed']);
-
-      if (bookingsError) throw bookingsError;
-
-      return {
-        ...tripData,
-        bookings: bookingsData || [],
-      } as TripWithPassengers;
+      return tripData as TripInfo | null;
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Use sample data if no real trip exists
-  const displayTrip = currentTrip || sampleCurrentTrip as unknown as TripWithPassengers;
-  const hasRealData = !!currentTrip;
+  // Fetch passengers for the trip - in real implementation, this would join with profiles
+  const { data: passengers } = useQuery({
+    queryKey: ['trip-passengers-manifest', currentTrip?.id],
+    queryFn: async () => {
+      if (!currentTrip?.id) return [];
+      
+      // In a real implementation, this would fetch from bookings joined with passenger details
+      // For now, return empty array to show sample data
+      return [] as PassengerManifestEntry[];
+    },
+    enabled: !!currentTrip?.id,
+  });
 
-  const filteredBookings = displayTrip?.bookings.filter(booking =>
-    booking.booking_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    booking.seat_numbers.some(seat => seat.toString().includes(searchTerm))
-  ) || [];
+  // Use sample data if no real data exists
+  const displayTrip = currentTrip || sampleCurrentTrip as unknown as TripInfo;
+  const displayPassengers = (passengers && passengers.length > 0) 
+    ? passengers 
+    : samplePassengerManifest;
+  const hasRealData = !!currentTrip && !!passengers && passengers.length > 0;
 
-  const totalPassengers = filteredBookings.reduce((sum, b) => sum + b.passenger_count, 0);
+  // Filter passengers by search term
+  const filteredPassengers = displayPassengers.filter(passenger =>
+    passenger.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    passenger.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    passenger.phone.includes(searchTerm) ||
+    passenger.seatNumber.toString().includes(searchTerm)
+  );
+
+  const totalPassengers = displayPassengers.length;
+  const busCapacity = displayTrip.bus?.capacity || 42;
 
   if (isLoading) {
     return (
@@ -165,89 +161,100 @@ export default function DriverPassengersPage() {
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Ticket className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{filteredBookings.length}</p>
-              <p className="text-sm text-muted-foreground">Bookings</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
+      {/* Total Passengers Card */}
+      <Card>
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-success/10">
               <UserCheck className="h-5 w-5 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalPassengers}</p>
-              <p className="text-sm text-muted-foreground">Passengers</p>
+              <p className="text-sm text-muted-foreground">Total Passengers</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-semibold text-muted-foreground">
+              {busCapacity - totalPassengers} seats available
+            </p>
+            <p className="text-sm text-muted-foreground">of {busCapacity} capacity</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by booking number or seat..."
+          placeholder="Search by name, phone, or seat number..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Passenger List */}
+      {/* Passenger Manifest Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Bookings ({filteredBookings.length})
+            Passengers ({filteredPassengers.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {filteredBookings.length > 0 ? (
-            <div className="space-y-3">
-              {filteredBookings.map((booking) => (
-                <div 
-                  key={booking.id} 
-                  className="p-4 bg-muted/50 rounded-lg space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Ticket className="h-4 w-4 text-primary" />
-                      <span className="font-semibold">{booking.booking_number}</span>
-                    </div>
-                    <Badge variant="outline">
-                      {booking.passenger_count} {booking.passenger_count === 1 ? 'passenger' : 'passengers'}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-success" />
-                    <span className="text-muted-foreground">Board:</span>
-                    <span>{booking.boarding_stop?.stop_name || 'Origin'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-destructive" />
-                    <span className="text-muted-foreground">Alight:</span>
-                    <span>{booking.alighting_stop?.stop_name || 'Destination'}</span>
-                  </div>
-
-                  <div className="pt-2 border-t">
-                    <span className="text-sm text-muted-foreground">Seats: </span>
-                    <span className="font-medium">
-                      {booking.seat_numbers.join(', ')}
-                    </span>
-                  </div>
-                </div>
-              ))}
+        <CardContent className="p-0">
+          {filteredPassengers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">Seat</TableHead>
+                    <TableHead>Passenger Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Next of Kin</TableHead>
+                    <TableHead>NoK Phone</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPassengers
+                    .sort((a, b) => a.seatNumber - b.seatNumber)
+                    .map((passenger) => (
+                    <TableRow key={passenger.id}>
+                      <TableCell className="font-bold text-primary">
+                        {passenger.seatNumber}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {passenger.firstName} {passenger.lastName}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {passenger.boardingStop} → {passenger.alightingStop}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <a 
+                          href={`tel:${passenger.phone.replace(/\s/g, '')}`}
+                          className="flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {passenger.phone}
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {passenger.nextOfKinName}
+                      </TableCell>
+                      <TableCell>
+                        <a 
+                          href={`tel:${passenger.nextOfKinPhone.replace(/\s/g, '')}`}
+                          className="flex items-center gap-1 text-muted-foreground hover:text-primary hover:underline"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {passenger.nextOfKinPhone}
+                        </a>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
