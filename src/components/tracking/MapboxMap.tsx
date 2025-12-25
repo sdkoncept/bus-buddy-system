@@ -35,10 +35,14 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken) return;
+
+    setMapError(null);
+    setMapLoaded(false);
 
     mapboxgl.accessToken = mapboxToken;
 
@@ -55,20 +59,32 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       'top-right'
     );
 
-    map.current.addControl(
-      new mapboxgl.FullscreenControl(),
-      'top-right'
-    );
+    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
 
-    map.current.on('load', () => {
+    const handleLoad = () => {
       setMapLoaded(true);
-    });
+    };
+
+    const handleError = (e: any) => {
+      // Mapbox errors are often token/style/network related.
+      console.error('Mapbox error:', e?.error || e);
+      setMapError(e?.error?.message || 'Failed to load map. Check Mapbox token and network access.');
+    };
+
+    map.current.on('load', handleLoad);
+    map.current.on('error', handleError);
 
     return () => {
       // Clean up markers
       Object.values(markersRef.current).forEach(marker => marker.remove());
       markersRef.current = {};
-      map.current?.remove();
+
+      if (map.current) {
+        map.current.off('load', handleLoad);
+        map.current.off('error', handleError);
+        map.current.remove();
+      }
+      map.current = null;
     };
   }, [mapboxToken]);
 
@@ -219,7 +235,18 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="absolute inset-0 rounded-lg" />
-      {!mapLoaded && (
+
+      {mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/60 rounded-lg">
+          <div className="max-w-md text-center p-6">
+            <Bus className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+            <h3 className="font-semibold">Map failed to load</h3>
+            <p className="text-sm text-muted-foreground mt-1">{mapError}</p>
+          </div>
+        </div>
+      )}
+
+      {!mapError && !mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-lg">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
