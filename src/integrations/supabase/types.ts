@@ -996,6 +996,27 @@ export type Database = {
           },
         ]
       }
+      states: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       stations: {
         Row: {
           address: string | null
@@ -1007,6 +1028,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
+          state_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1019,6 +1041,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
+          state_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1031,9 +1054,18 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
+          state_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stations_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_movements: {
         Row: {
