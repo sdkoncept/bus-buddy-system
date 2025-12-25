@@ -137,13 +137,22 @@ export function useCreateUser() {
       password, 
       fullName, 
       phone,
-      role 
+      role,
+      driverDetails
     }: { 
       email: string; 
       password: string; 
       fullName: string; 
       phone?: string;
-      role: AppRole 
+      role: AppRole;
+      driverDetails?: {
+        license_number: string;
+        license_expiry: string;
+        date_of_birth?: string;
+        address?: string;
+        emergency_contact?: string;
+        emergency_phone?: string;
+      };
     }) => {
       // Sign up the user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -177,10 +186,29 @@ export function useCreateUser() {
         if (profileError) throw profileError;
       }
 
+      // If role is driver, create a driver record
+      if (role === 'driver' && driverDetails) {
+        const { error: driverError } = await supabase
+          .from('drivers')
+          .insert({
+            user_id: authData.user.id,
+            license_number: driverDetails.license_number,
+            license_expiry: driverDetails.license_expiry,
+            date_of_birth: driverDetails.date_of_birth || null,
+            address: driverDetails.address || null,
+            emergency_contact: driverDetails.emergency_contact || null,
+            emergency_phone: driverDetails.emergency_phone || null,
+            status: 'active',
+          });
+
+        if (driverError) throw driverError;
+      }
+
       return authData.user;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
       toast.success('User created successfully');
     },
     onError: (error: Error) => {

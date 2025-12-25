@@ -3,17 +3,55 @@ import { supabase } from '@/integrations/supabase/client';
 import { Driver } from '@/types/database';
 import { toast } from 'sonner';
 
+export interface DriverWithProfile extends Omit<Driver, 'profile'> {
+  profile?: {
+    full_name: string;
+    email: string;
+    phone: string | null;
+  } | null;
+}
+
 export function useDrivers() {
   return useQuery({
     queryKey: ['drivers'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch drivers
+      const { data: drivers, error: driversError } = await supabase
         .from('drivers')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Driver[];
+      if (driversError) throw driversError;
+      
+      // Fetch profiles for drivers that have user_ids
+      const userIds = drivers
+        .map(d => d.user_id)
+        .filter((id): id is string => id !== null);
+      
+      let profiles: { user_id: string; full_name: string; email: string; phone: string | null }[] = [];
+      
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email, phone')
+          .in('user_id', userIds);
+        
+        if (profilesError) throw profilesError;
+        profiles = profilesData || [];
+      }
+      
+      // Combine drivers with profiles
+      const driversWithProfiles: DriverWithProfile[] = drivers.map(driver => {
+        const profile = driver.user_id 
+          ? profiles.find(p => p.user_id === driver.user_id) 
+          : null;
+        return {
+          ...driver,
+          profile: profile || null,
+        };
+      });
+      
+      return driversWithProfiles;
     },
   });
 }

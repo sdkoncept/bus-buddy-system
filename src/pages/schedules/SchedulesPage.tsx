@@ -204,7 +204,7 @@ export default function SchedulesPage() {
                               <SelectContent>
                                 {drivers?.filter(d => d.status === 'active').map((driver) => (
                                   <SelectItem key={driver.id} value={driver.id}>
-                                    {driver.license_number}
+                                    {driver.profile?.full_name || driver.license_number}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
