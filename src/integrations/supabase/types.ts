@@ -1446,7 +1446,12 @@ export type Database = {
         | "completed"
         | "cancelled"
       payment_status: "pending" | "completed" | "failed" | "refunded"
-      stock_request_status: "pending" | "approved" | "rejected" | "fulfilled"
+      stock_request_status:
+        | "pending"
+        | "approved"
+        | "admin_approved"
+        | "rejected"
+        | "fulfilled"
       work_order_status:
         | "pending"
         | "assigned"
@@ -1600,7 +1605,13 @@ export const Constants = {
         "cancelled",
       ],
       payment_status: ["pending", "completed", "failed", "refunded"],
-      stock_request_status: ["pending", "approved", "rejected", "fulfilled"],
+      stock_request_status: [
+        "pending",
+        "approved",
+        "admin_approved",
+        "rejected",
+        "fulfilled",
+      ],
       work_order_status: [
         "pending",
         "assigned",

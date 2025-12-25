@@ -16,10 +16,11 @@ import { format } from 'date-fns';
 import { StockRequestStatus } from '@/types/database';
 
 const statusConfig: Record<StockRequestStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
-  pending: { label: 'Pending', variant: 'secondary', icon: <Clock className="h-3 w-3" /> },
+  pending: { label: 'Pending Admin', variant: 'secondary', icon: <Clock className="h-3 w-3" /> },
   approved: { label: 'Approved', variant: 'default', icon: <CheckCircle className="h-3 w-3" /> },
+  admin_approved: { label: 'Awaiting Dispatch', variant: 'default', icon: <CheckCircle className="h-3 w-3" /> },
   rejected: { label: 'Rejected', variant: 'destructive', icon: <XCircle className="h-3 w-3" /> },
-  fulfilled: { label: 'Fulfilled', variant: 'outline', icon: <Package className="h-3 w-3" /> },
+  fulfilled: { label: 'Dispatched', variant: 'outline', icon: <Package className="h-3 w-3" /> },
 };
 
 export default function PartsRequestsTab() {
@@ -33,7 +34,7 @@ export default function PartsRequestsTab() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [actionType, setActionType] = useState<'approve' | 'reject' | 'fulfill' | null>(null);
+  const [actionType, setActionType] = useState<'admin_approve' | 'reject' | 'dispatch' | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   const [requestForm, setRequestForm] = useState({
@@ -47,8 +48,10 @@ export default function PartsRequestsTab() {
     notes: '',
   });
 
-  const canManageRequests = role === 'admin' || role === 'storekeeper';
-  const canCreateRequests = role === 'mechanic' || role === 'storekeeper' || role === 'admin';
+  const isAdmin = role === 'admin';
+  const isStorekeeper = role === 'storekeeper';
+  const canManageRequests = isAdmin || isStorekeeper;
+  const canCreateRequests = role === 'mechanic' || isStorekeeper || isAdmin;
 
   // Filter requests based on role and filter
   const filteredRequests = requests?.filter(request => {
@@ -64,7 +67,7 @@ export default function PartsRequestsTab() {
   });
 
   const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
-  const approvedCount = requests?.filter(r => r.status === 'approved').length || 0;
+  const adminApprovedCount = requests?.filter(r => r.status === 'admin_approved').length || 0;
   const fulfilledCount = requests?.filter(r => r.status === 'fulfilled').length || 0;
 
   const handleCreateRequest = async (e: React.FormEvent) => {
@@ -84,11 +87,11 @@ export default function PartsRequestsTab() {
     }
   };
 
-  const handleOpenActionDialog = (request: any, type: 'approve' | 'reject' | 'fulfill') => {
+  const handleOpenActionDialog = (request: any, type: 'admin_approve' | 'reject' | 'dispatch') => {
     setSelectedRequest(request);
     setActionType(type);
     setActionForm({
-      quantity_approved: request.quantity_requested,
+      quantity_approved: request.quantity_approved || request.quantity_requested,
       notes: '',
     });
     setIsActionDialogOpen(true);
@@ -99,10 +102,11 @@ export default function PartsRequestsTab() {
     if (!selectedRequest || !actionType || !user) return;
 
     try {
-      if (actionType === 'approve') {
+      if (actionType === 'admin_approve') {
+        // Admin approves - moves to admin_approved status, awaiting storekeeper dispatch
         await updateRequest.mutateAsync({
           id: selectedRequest.id,
-          status: 'approved',
+          status: 'admin_approved',
           quantity_approved: actionForm.quantity_approved,
           approved_by: user.id,
           notes: actionForm.notes || selectedRequest.notes,
@@ -114,15 +118,15 @@ export default function PartsRequestsTab() {
           approved_by: user.id,
           notes: actionForm.notes || selectedRequest.notes,
         });
-      } else if (actionType === 'fulfill') {
-        // Create stock movement for the fulfilled request
+      } else if (actionType === 'dispatch') {
+        // Storekeeper dispatches - create stock movement and close the request
         await createMovement.mutateAsync({
           item_id: selectedRequest.item_id,
           movement_type: 'out',
           quantity: selectedRequest.quantity_approved || selectedRequest.quantity_requested,
           reference_type: 'stock_request',
           reference_id: selectedRequest.id,
-          notes: `Fulfilled stock request`,
+          notes: `Dispatched to mechanic`,
           created_by: user.id,
         });
 
@@ -169,11 +173,11 @@ export default function PartsRequestsTab() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Awaiting Dispatch</CardTitle>
             <CheckCircle className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{approvedCount}</div>
+            <div className="text-2xl font-bold text-primary">{adminApprovedCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -204,10 +208,10 @@ export default function PartsRequestsTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending Admin</SelectItem>
+                  <SelectItem value="admin_approved">Awaiting Dispatch</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="fulfilled">Fulfilled</SelectItem>
+                  <SelectItem value="fulfilled">Dispatched</SelectItem>
                 </SelectContent>
               </Select>
               {canCreateRequests && (
@@ -322,13 +326,14 @@ export default function PartsRequestsTab() {
                       {canManageRequests && (
                         <TableCell>
                           <div className="flex gap-1">
-                            {request.status === 'pending' && (
+                            {/* Admin can approve/reject pending requests */}
+                            {request.status === 'pending' && isAdmin && (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="h-8"
-                                  onClick={() => handleOpenActionDialog(request, 'approve')}
+                                  onClick={() => handleOpenActionDialog(request, 'admin_approve')}
                                 >
                                   Approve
                                 </Button>
@@ -342,14 +347,15 @@ export default function PartsRequestsTab() {
                                 </Button>
                               </>
                             )}
-                            {request.status === 'approved' && (
+                            {/* Storekeeper can dispatch admin-approved requests */}
+                            {request.status === 'admin_approved' && isStorekeeper && (
                               <Button
                                 size="sm"
                                 variant="default"
                                 className="h-8"
-                                onClick={() => handleOpenActionDialog(request, 'fulfill')}
+                                onClick={() => handleOpenActionDialog(request, 'dispatch')}
                               >
-                                Fulfill
+                                Dispatch
                               </Button>
                             )}
                           </div>
@@ -369,14 +375,14 @@ export default function PartsRequestsTab() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'approve' && 'Approve Request'}
+              {actionType === 'admin_approve' && 'Approve Request'}
               {actionType === 'reject' && 'Reject Request'}
-              {actionType === 'fulfill' && 'Fulfill Request'}
+              {actionType === 'dispatch' && 'Dispatch Item'}
             </DialogTitle>
             <DialogDescription>
-              {actionType === 'approve' && 'Approve this parts request and specify the quantity'}
+              {actionType === 'admin_approve' && 'Approve this parts request and specify the quantity for dispatch'}
               {actionType === 'reject' && 'Reject this request with a reason'}
-              {actionType === 'fulfill' && 'Mark this request as fulfilled and deduct from inventory'}
+              {actionType === 'dispatch' && 'Dispatch this item to the mechanic and deduct from inventory'}
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
@@ -391,9 +397,14 @@ export default function PartsRequestsTab() {
                     Available: {selectedRequest.item.quantity} units
                   </p>
                 )}
+                {actionType === 'dispatch' && selectedRequest.quantity_approved && (
+                  <p className="text-sm text-muted-foreground">
+                    Admin Approved: {selectedRequest.quantity_approved} units
+                  </p>
+                )}
               </div>
 
-              {actionType === 'approve' && (
+              {actionType === 'admin_approve' && (
                 <div className="space-y-2">
                   <Label htmlFor="qty_approved">Quantity to Approve</Label>
                   <Input
@@ -408,7 +419,7 @@ export default function PartsRequestsTab() {
                 </div>
               )}
 
-              {(actionType === 'approve' || actionType === 'reject') && (
+              {(actionType === 'admin_approve' || actionType === 'reject') && (
                 <div className="space-y-2">
                   <Label htmlFor="action_notes">
                     {actionType === 'reject' ? 'Reason for Rejection' : 'Notes (optional)'}
@@ -424,9 +435,9 @@ export default function PartsRequestsTab() {
                 </div>
               )}
 
-              {actionType === 'fulfill' && (
+              {actionType === 'dispatch' && (
                 <p className="text-sm text-muted-foreground">
-                  This will deduct {selectedRequest.quantity_approved || selectedRequest.quantity_requested} units from inventory.
+                  This will deduct {selectedRequest.quantity_approved || selectedRequest.quantity_requested} units from inventory and dispatch to the mechanic.
                 </p>
               )}
 
@@ -439,9 +450,9 @@ export default function PartsRequestsTab() {
                   variant={actionType === 'reject' ? 'destructive' : 'default'}
                   disabled={updateRequest.isPending || createMovement.isPending}
                 >
-                  {actionType === 'approve' && 'Approve'}
+                  {actionType === 'admin_approve' && 'Approve'}
                   {actionType === 'reject' && 'Reject'}
-                  {actionType === 'fulfill' && 'Fulfill'}
+                  {actionType === 'dispatch' && 'Dispatch'}
                 </Button>
               </DialogFooter>
             </form>
