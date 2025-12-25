@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStartTrip, useEndTrip, useTripPassengers } from '@/hooks/useDriverTrips';
 import { useGPSTracking } from '@/hooks/useGPSTracking';
+import { sampleTrips, samplePassengers } from '@/data/sampleDriverData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,8 +42,13 @@ export default function DriverTripDetailPage() {
   const [showStartDialog, setShowStartDialog] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
 
-  // Fetch trip details
-  const { data: trip, isLoading } = useQuery({
+  const isSampleTrip = id?.startsWith('sample-');
+
+  // Get sample trip data
+  const sampleTrip = isSampleTrip ? sampleTrips.find(t => t.id === id) : null;
+
+  // Fetch trip details from database (only if not a sample trip)
+  const { data: dbTrip, isLoading } = useQuery({
     queryKey: ['trip-detail', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,15 +60,30 @@ export default function DriverTripDetailPage() {
           driver:drivers(*)
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && !isSampleTrip,
   });
 
-  const { data: passengers } = useTripPassengers(id || '');
+  // Use sample trip or database trip
+  const trip = isSampleTrip ? (sampleTrip ? {
+    id: sampleTrip.id,
+    trip_date: sampleTrip.trip_date,
+    departure_time: sampleTrip.departure_time,
+    arrival_time: sampleTrip.arrival_time,
+    status: sampleTrip.status,
+    available_seats: sampleTrip.available_seats,
+    bus_id: 'sample-bus',
+    route: sampleTrip.route,
+    bus: sampleTrip.bus,
+  } : null) : dbTrip;
+
+  // Get passengers - use sample data for sample trips
+  const { data: dbPassengers } = useTripPassengers(isSampleTrip ? '' : (id || ''));
+  const passengers = isSampleTrip ? samplePassengers : dbPassengers;
   const startTrip = useStartTrip();
   const endTrip = useEndTrip();
 
