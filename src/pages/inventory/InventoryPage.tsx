@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useInventoryItems, useCreateInventoryItem, useSuppliers, useCreateSupplier, useInventoryCategories } from '@/hooks/useInventory';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import { Plus, Package, Search, AlertTriangle, Truck, ClipboardList } from 'luci
 import PartsRequestsTab from '@/components/inventory/PartsRequestsTab';
 
 export default function InventoryPage() {
+  const { role } = useAuth();
   const { data: items, isLoading: itemsLoading } = useInventoryItems();
   const { data: suppliers } = useSuppliers();
   const { data: categories } = useInventoryCategories();
@@ -23,6 +25,10 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
+
+  // Mechanics can only view inventory and request parts
+  const isMechanic = role === 'mechanic';
+  const canManageInventory = !isMechanic;
 
   const [itemForm, setItemForm] = useState({
     name: '',
@@ -101,19 +107,26 @@ export default function InventoryPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
-          <p className="text-muted-foreground">Track parts, supplies, and stock levels</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isMechanic ? 'Parts & Inventory' : 'Inventory Management'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isMechanic 
+              ? 'View available parts and request what you need' 
+              : 'Track parts, supplies, and stock levels'}
+          </p>
         </div>
       </div>
 
-      <Tabs defaultValue="items" className="space-y-6">
+      <Tabs defaultValue={isMechanic ? 'requests' : 'items'} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="items">Inventory Items</TabsTrigger>
-          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+          {!isMechanic && <TabsTrigger value="items">Inventory Items</TabsTrigger>}
+          {!isMechanic && <TabsTrigger value="suppliers">Suppliers</TabsTrigger>}
           <TabsTrigger value="requests" className="gap-1">
             <ClipboardList className="h-4 w-4" />
             Parts Requisition
           </TabsTrigger>
+          {isMechanic && <TabsTrigger value="items">View Inventory</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="items" className="space-y-6">
@@ -197,101 +210,104 @@ export default function InventoryPage() {
                       className="pl-8"
                     />
                   </div>
-                  <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Item
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Add Inventory Item</DialogTitle>
-                        <DialogDescription>Add a new part or supply to inventory</DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleItemSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Item Name</Label>
-                            <Input
-                              id="name"
-                              value={itemForm.name}
-                              onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-                              required
-                            />
+                  {/* Only show Add Item button for non-mechanics */}
+                  {canManageInventory && (
+                    <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="gap-2">
+                          <Plus className="h-4 w-4" />
+                          Add Item
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Add Inventory Item</DialogTitle>
+                          <DialogDescription>Add a new part or supply to inventory</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleItemSubmit} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Item Name</Label>
+                              <Input
+                                id="name"
+                                value={itemForm.name}
+                                onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="sku">SKU</Label>
+                              <Input
+                                id="sku"
+                                value={itemForm.sku}
+                                onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="sku">SKU</Label>
-                            <Input
-                              id="sku"
-                              value={itemForm.sku}
-                              onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
-                            />
+                            <Label htmlFor="category">Category</Label>
+                            <Select value={itemForm.category_id} onValueChange={(value) => setItemForm({ ...itemForm, category_id: value })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories?.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="category">Category</Label>
-                          <Select value={itemForm.category_id} onValueChange={(value) => setItemForm({ ...itemForm, category_id: value })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories?.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="quantity">Quantity</Label>
+                              <Input
+                                id="quantity"
+                                type="number"
+                                value={itemForm.quantity}
+                                onChange={(e) => setItemForm({ ...itemForm, quantity: parseInt(e.target.value) })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="min_quantity">Min Qty</Label>
+                              <Input
+                                id="min_quantity"
+                                type="number"
+                                value={itemForm.min_quantity}
+                                onChange={(e) => setItemForm({ ...itemForm, min_quantity: parseInt(e.target.value) })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="unit_cost">Unit Cost</Label>
+                              <Input
+                                id="unit_cost"
+                                type="number"
+                                step="0.01"
+                                value={itemForm.unit_cost}
+                                onChange={(e) => setItemForm({ ...itemForm, unit_cost: parseFloat(e.target.value) })}
+                              />
+                            </div>
+                          </div>
                           <div className="space-y-2">
-                            <Label htmlFor="quantity">Quantity</Label>
+                            <Label htmlFor="location">Location</Label>
                             <Input
-                              id="quantity"
-                              type="number"
-                              value={itemForm.quantity}
-                              onChange={(e) => setItemForm({ ...itemForm, quantity: parseInt(e.target.value) })}
+                              id="location"
+                              value={itemForm.location}
+                              onChange={(e) => setItemForm({ ...itemForm, location: e.target.value })}
+                              placeholder="Shelf A1"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="min_quantity">Min Qty</Label>
-                            <Input
-                              id="min_quantity"
-                              type="number"
-                              value={itemForm.min_quantity}
-                              onChange={(e) => setItemForm({ ...itemForm, min_quantity: parseInt(e.target.value) })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="unit_cost">Unit Cost</Label>
-                            <Input
-                              id="unit_cost"
-                              type="number"
-                              step="0.01"
-                              value={itemForm.unit_cost}
-                              onChange={(e) => setItemForm({ ...itemForm, unit_cost: parseFloat(e.target.value) })}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location">Location</Label>
-                          <Input
-                            id="location"
-                            value={itemForm.location}
-                            onChange={(e) => setItemForm({ ...itemForm, location: e.target.value })}
-                            placeholder="Shelf A1"
-                          />
-                        </div>
-                        <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setIsItemDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={createItem.isPending}>
-                            Add Item
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                          <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsItemDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" disabled={createItem.isPending}>
+                              Add Item
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -330,116 +346,118 @@ export default function InventoryPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="suppliers" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <CardTitle>Suppliers</CardTitle>
-                  <CardDescription>Manage your vendors and suppliers</CardDescription>
+        {!isMechanic && (
+          <TabsContent value="suppliers" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <CardTitle>Suppliers</CardTitle>
+                    <CardDescription>Manage your vendors and suppliers</CardDescription>
+                  </div>
+                  <Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Supplier
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Supplier</DialogTitle>
+                        <DialogDescription>Add a new vendor</DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleSupplierSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="supplier_name">Company Name</Label>
+                          <Input
+                            id="supplier_name"
+                            value={supplierForm.name}
+                            onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="contact_person">Contact Person</Label>
+                            <Input
+                              id="contact_person"
+                              value={supplierForm.contact_person}
+                              onChange={(e) => setSupplierForm({ ...supplierForm, contact_person: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone</Label>
+                            <Input
+                              id="phone"
+                              value={supplierForm.phone}
+                              onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={supplierForm.email}
+                            onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="address">Address</Label>
+                          <Input
+                            id="address"
+                            value={supplierForm.address}
+                            onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setIsSupplierDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit" disabled={createSupplier.isPending}>
+                            Add Supplier
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-                <Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Supplier
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Supplier</DialogTitle>
-                      <DialogDescription>Add a new vendor</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSupplierSubmit} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="supplier_name">Company Name</Label>
-                        <Input
-                          id="supplier_name"
-                          value={supplierForm.name}
-                          onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="contact_person">Contact Person</Label>
-                          <Input
-                            id="contact_person"
-                            value={supplierForm.contact_person}
-                            onChange={(e) => setSupplierForm({ ...supplierForm, contact_person: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone</Label>
-                          <Input
-                            id="phone"
-                            value={supplierForm.phone}
-                            onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={supplierForm.email}
-                          onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
-                        <Input
-                          id="address"
-                          value={supplierForm.address}
-                          onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
-                        />
-                      </div>
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsSupplierDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={createSupplier.isPending}>
-                          Add Supplier
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Contact Person</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {suppliers?.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">{supplier.name}</TableCell>
-                      <TableCell>{supplier.contact_person || '-'}</TableCell>
-                      <TableCell>{supplier.email || '-'}</TableCell>
-                      <TableCell>{supplier.phone || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={supplier.is_active ? 'default' : 'secondary'}>
-                          {supplier.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Contact Person</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  </TableHeader>
+                  <TableBody>
+                    {suppliers?.map((supplier) => (
+                      <TableRow key={supplier.id}>
+                        <TableCell className="font-medium">{supplier.name}</TableCell>
+                        <TableCell>{supplier.contact_person || '-'}</TableCell>
+                        <TableCell>{supplier.email || '-'}</TableCell>
+                        <TableCell>{supplier.phone || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={supplier.is_active ? 'default' : 'secondary'}>
+                            {supplier.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
-        <TabsContent value="requests">
+        <TabsContent value="requests" className="space-y-6">
           <PartsRequestsTab />
         </TabsContent>
       </Tabs>

@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bus, Users, Route, Ticket, DollarSign, Wrench, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Bus, Users, Route, Ticket, TrendingUp, AlertTriangle } from 'lucide-react';
 import { PendingApprovalsWidget } from '@/components/dashboard/PendingApprovalsWidget';
+import { MechanicDashboard } from '@/components/dashboard/MechanicDashboard';
 
 const stats = [
   { title: 'Total Buses', value: '12', icon: Bus, color: 'text-primary', change: '+2 this month' },
@@ -20,6 +21,12 @@ const recentActivity = [
 export default function Dashboard() {
   const { profile, role } = useAuth();
 
+  // Show mechanic-specific dashboard
+  if (role === 'mechanic') {
+    return <MechanicDashboard />;
+  }
+
+  // Default dashboard for other roles
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
