@@ -233,8 +233,8 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   }
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="absolute inset-0 rounded-lg" />
+    <div className="relative w-full h-full min-h-[400px]">
+      <div ref={mapContainer} className="absolute inset-0 rounded-lg" style={{ minHeight: '400px' }} />
 
       {mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/60 rounded-lg">
