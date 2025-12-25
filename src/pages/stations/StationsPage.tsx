@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,11 +61,15 @@ const StationsPage = () => {
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const pendingFlyToRef = useRef<any>(null);
+  const skipFitBoundsRef = useRef(false);
+  const lastFilterKeyRef = useRef<string>('');
 
-  // Filter stations by state
-  const filteredStations = stations?.filter(s => 
-    selectedState === 'all' || s.state_id === selectedState
-  ) || [];
+  // Filter stations by state - memoized to prevent unnecessary re-renders
+  const filteredStations = useMemo(() => {
+    return stations?.filter(s => 
+      selectedState === 'all' || s.state_id === selectedState
+    ) || [];
+  }, [stations, selectedState]);
 
   // Initialize map
   useEffect(() => {
@@ -155,16 +159,27 @@ const StationsPage = () => {
       }
     });
 
-    // Fit bounds if there are stations with coordinates
+    // Only fit bounds if filter changed (not when user clicked a station)
+    const currentFilterKey = selectedState;
+    const filterChanged = lastFilterKeyRef.current !== currentFilterKey;
+    lastFilterKeyRef.current = currentFilterKey;
+
+    // Skip fitBounds if user just clicked a station
+    if (skipFitBoundsRef.current) {
+      skipFitBoundsRef.current = false;
+      return;
+    }
+
+    // Fit bounds only when filter changes or initial load
     const stationsWithCoords = filteredStations.filter(s => s.latitude && s.longitude);
-    if (stationsWithCoords.length > 0 && map.current) {
+    if (stationsWithCoords.length > 0 && map.current && filterChanged) {
       const bounds = new mapboxgl.LngLatBounds();
       stationsWithCoords.forEach(s => {
         bounds.extend([s.longitude!, s.latitude!]);
       });
       map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
     }
-  }, [filteredStations, mapboxToken]);
+  }, [filteredStations, selectedState]);
 
   const handleOpenDialog = (station?: any) => {
     if (station) {
@@ -221,14 +236,15 @@ const StationsPage = () => {
   };
 
   const flyToStation = useCallback((station: any) => {
+    // Prevent fitBounds from overriding this flyTo
+    skipFitBoundsRef.current = true;
+    
     // Always select the station first
     setSelectedStation(station);
     
     // Coerce coordinates to numbers
     const lat = Number(station.latitude);
     const lng = Number(station.longitude);
-    
-    console.log('flyToStation:', station.name, 'mapLoaded:', mapLoaded, 'coords:', lat, lng, 'valid:', Number.isFinite(lat) && Number.isFinite(lng));
     
     // Only try to fly if coordinates are valid numbers
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
