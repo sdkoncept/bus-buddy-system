@@ -41,6 +41,7 @@ export default function DriverAppPage() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const { data: trips, isLoading: tripsLoading, refetch: refetchTrips } = useDriverTrips(todayStr);
   const startTripMutation = useStartTrip();
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   const endTripMutation = useEndTrip();
 
   // Get current in-progress trip
@@ -108,6 +109,17 @@ export default function DriverAppPage() {
 
     fetchDriverInfo();
   }, [user?.id]);
+
+  // Auto-refresh every 10 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchTrips();
+      setLastRefresh(new Date());
+      toast.info('Data refreshed');
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(interval);
+  }, [refetchTrips]);
 
   const handleStartTrip = async (tripId: string) => {
     try {
@@ -310,7 +322,11 @@ export default function DriverAppPage() {
                 <Route className="h-4 w-4" />
                 Today's Trips
               </CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => refetchTrips()}>
+              <Button variant="ghost" size="icon" onClick={() => {
+                refetchTrips();
+                setLastRefresh(new Date());
+                toast.info('Data refreshed');
+              }}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
@@ -394,7 +410,8 @@ export default function DriverAppPage() {
         {/* Platform Info */}
         <div className="text-center text-xs text-muted-foreground pt-4">
           <p>Platform: {isNative ? 'Native Android' : 'Web Browser'}</p>
-          <p className="mt-1">Updates every 15 seconds when tracking</p>
+          <p className="mt-1">GPS updates every 15 seconds • Auto-refresh every 10 min</p>
+          <p className="mt-1">Last refresh: {format(lastRefresh, 'HH:mm:ss')}</p>
         </div>
       </div>
     </div>
