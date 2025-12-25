@@ -3,22 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { MapPin, Bus, Clock, Navigation, Search, RefreshCw, Settings } from 'lucide-react';
+import { MapPin, Bus, Clock, Navigation, Search, RefreshCw } from 'lucide-react';
 import { useBuses } from '@/hooks/useBuses';
 import { useSchedules } from '@/hooks/useSchedules';
 import { useRoutes } from '@/hooks/useRoutes';
 import { useMapboxToken } from '@/hooks/useMapboxToken';
 import MapboxMap from '@/components/tracking/MapboxMap';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 
 interface BusLocation {
   id: string;
@@ -39,13 +29,11 @@ export default function TrackingPage() {
   const { data: buses } = useBuses();
   const { data: schedules } = useSchedules();
   const { data: routes } = useRoutes();
-  const { token: mapboxToken, saveToken } = useMapboxToken();
+  const { token: mapboxToken, loading: tokenLoading, error: tokenError } = useMapboxToken();
   
   const [selectedBus, setSelectedBus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [busLocations, setBusLocations] = useState<BusLocation[]>([]);
-  const [tokenInput, setTokenInput] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const activeBuses = buses?.filter((b: any) => b.status === 'active') || [];
   
@@ -116,14 +104,6 @@ export default function TrackingPage() {
     return () => clearInterval(interval);
   }, [busLocations.length]);
 
-  const handleSaveToken = () => {
-    if (tokenInput.trim()) {
-      saveToken(tokenInput.trim());
-      setDialogOpen(false);
-      setTokenInput('');
-    }
-  };
-
   const selectedBusData = busLocations.find(b => b.id === selectedBus);
 
   return (
@@ -136,38 +116,6 @@ export default function TrackingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Mapbox Configuration</DialogTitle>
-                <DialogDescription>
-                  Enter your Mapbox public access token to enable live map tracking.
-                  Get your token from <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">mapbox.com</a>
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="token">Public Access Token</Label>
-                  <Input
-                    id="token"
-                    placeholder="pk.eyJ1Ijo..."
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleSaveToken} disabled={!tokenInput.trim()}>
-                  Save Token
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           <Button variant="outline" onClick={() => window.location.reload()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
