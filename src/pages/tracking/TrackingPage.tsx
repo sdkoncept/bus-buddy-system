@@ -91,8 +91,8 @@ export default function TrackingPage() {
           model: bus.model,
            lat: Number(realtimeLoc.latitude),
            lng: Number(realtimeLoc.longitude),
-           // Stored from GPS as m/s by default; convert to km/h for display.
-           speed: realtimeLoc.speed == null ? 0 : Number(realtimeLoc.speed) * 3.6,
+           // Speed is stored as km/h by the GPS sender.
+           speed: realtimeLoc.speed == null ? 0 : Number(realtimeLoc.speed),
            heading: Number(realtimeLoc.heading) || 0,
            lastUpdate: realtimeLoc.recorded_at,
           route: route ? {
