@@ -8,23 +8,28 @@ export function useMapboxToken() {
 
   useEffect(() => {
     async function fetchToken() {
+      console.log('[useMapboxToken] Fetching token from edge function...');
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        
+
+        console.log('[useMapboxToken] Response:', { data, error });
+
         if (error) {
-          console.error('Error fetching Mapbox token:', error);
-          setError('Failed to load Mapbox token');
+          console.error('[useMapboxToken] Edge function error:', error);
+          setError(`Failed to load Mapbox token: ${error.message || 'Unknown error'}`);
           return;
         }
 
         if (data?.token) {
+          console.log('[useMapboxToken] Token received (length:', data.token.length, ')');
           setToken(data.token);
         } else {
-          setError('Mapbox token not configured');
+          console.warn('[useMapboxToken] No token in response data:', data);
+          setError('Mapbox token not configured in backend secrets');
         }
-      } catch (err) {
-        console.error('Error fetching Mapbox token:', err);
-        setError('Failed to load Mapbox token');
+      } catch (err: any) {
+        console.error('[useMapboxToken] Unexpected error:', err);
+        setError(`Failed to load Mapbox token: ${err?.message || 'Unexpected error'}`);
       } finally {
         setLoading(false);
       }

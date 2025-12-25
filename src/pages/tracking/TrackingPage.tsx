@@ -32,7 +32,7 @@ export default function TrackingPage() {
   const { data: buses } = useBuses();
   const { data: schedules } = useSchedules();
   const { data: routes } = useRoutes();
-  const { token: mapboxToken } = useMapboxToken();
+  const { token: mapboxToken, loading: tokenLoading, error: tokenError } = useMapboxToken();
   const { locations: realtimeLocations, isConnected } = useRealtimeBusLocations();
   
   const [selectedBus, setSelectedBus] = useState<string>('');
@@ -253,13 +253,30 @@ export default function TrackingPage() {
             <CardDescription>Real-time bus locations with GPS tracking</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative h-[500px] rounded-lg overflow-hidden">
-              <MapboxMap
-                buses={busLocations}
-                selectedBusId={selectedBus}
-                onBusSelect={setSelectedBus}
-                mapboxToken={mapboxToken}
-              />
+            <div className="relative h-[500px] rounded-lg overflow-hidden bg-muted">
+              {tokenLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Loading map token...</p>
+                  </div>
+                </div>
+              ) : tokenError ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="max-w-md text-center p-6">
+                    <Bus className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <h3 className="font-semibold">Map unavailable</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{tokenError}</p>
+                  </div>
+                </div>
+              ) : (
+                <MapboxMap
+                  buses={busLocations}
+                  selectedBusId={selectedBus}
+                  onBusSelect={setSelectedBus}
+                  mapboxToken={mapboxToken}
+                />
+              )}
             </div>
 
             {selectedBusData && (
