@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Geolocation, Position, PermissionStatus } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { bearingDegrees, speedKmhFromSamples } from '@/lib/geo';
+
+// GPS acquisition stages
+type GPSStage = 'idle' | 'warming_up' | 'acquiring' | 'tracking' | 'error';
 
 interface GPSPosition {
   latitude: number;
@@ -14,11 +16,46 @@ interface GPSPosition {
   timestamp: number;
 }
 
+interface GPSDiagnostics {
+  stage: GPSStage;
+  permissionStatus: string;
+  lastFixAge: number | null; // seconds since last fix
+  fixCount: number;
+  lastSendResult: 'success' | 'error' | 'pending' | null;
+  lastSendTime: number | null;
+  lastError: string | null;
+  watchAttempts: number;
+  provider: 'high_accuracy' | 'low_accuracy' | 'cached';
+}
+
 interface UseCapacitorGPSOptions {
   tripId?: string;
   busId?: string;
   updateIntervalMs?: number;
   enabled?: boolean;
+}
+
+const STORAGE_KEY = 'gps_last_known_position';
+
+// Persist last known position to localStorage
+function saveLastKnownPosition(pos: GPSPosition) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
+  } catch (e) {
+    console.warn('[CapacitorGPS] Failed to save position to localStorage:', e);
+  }
+}
+
+function loadLastKnownPosition(): GPSPosition | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('[CapacitorGPS] Failed to load position from localStorage:', e);
+  }
+  return null;
 }
 
 export function useCapacitorGPS({
@@ -27,14 +64,35 @@ export function useCapacitorGPS({
   updateIntervalMs = 15000,
   enabled = false,
 }: UseCapacitorGPSOptions) {
-  const [position, setPosition] = useState<GPSPosition | null>(null);
+  const [position, setPosition] = useState<GPSPosition | null>(() => loadLastKnownPosition());
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus | null>(null);
+  const [stage, setStage] = useState<GPSStage>('idle');
+  const [diagnostics, setDiagnostics] = useState<GPSDiagnostics>({
+    stage: 'idle',
+    permissionStatus: 'unknown',
+    lastFixAge: null,
+    fixCount: 0,
+    lastSendResult: null,
+    lastSendTime: null,
+    lastError: null,
+    watchAttempts: 0,
+    provider: 'cached',
+  });
+
   const watchIdRef = useRef<string | null>(null);
   const lastSentRef = useRef<number>(0);
   const lastFixRef = useRef<GPSPosition | null>(null);
+  const fixCountRef = useRef(0);
+  const watchAttemptsRef = useRef(0);
+  const warmUpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isNative = Capacitor.isNativePlatform();
+
+  // Update diagnostics helper
+  const updateDiagnostics = useCallback((updates: Partial<GPSDiagnostics>) => {
+    setDiagnostics(prev => ({ ...prev, ...updates }));
+  }, []);
 
   // Check if running on native platform
   const checkPlatform = useCallback(() => {
@@ -49,25 +107,29 @@ export function useCapacitorGPS({
       const status = await Geolocation.checkPermissions();
       console.log('[CapacitorGPS] Permission status:', status);
       setPermissionStatus(status);
+      updateDiagnostics({ permissionStatus: status.location || 'unknown' });
       return status;
     } catch (err) {
       console.error('[CapacitorGPS] Error checking permissions:', err);
+      updateDiagnostics({ permissionStatus: 'error' });
       return null;
     }
-  }, []);
+  }, [updateDiagnostics]);
 
   const requestPermissions = useCallback(async () => {
     try {
       const status = await Geolocation.requestPermissions();
       console.log('[CapacitorGPS] Permission requested:', status);
       setPermissionStatus(status);
+      updateDiagnostics({ permissionStatus: status.location || 'unknown' });
       return status;
     } catch (err) {
       console.error('[CapacitorGPS] Error requesting permissions:', err);
       setError('Failed to request location permissions');
+      updateDiagnostics({ permissionStatus: 'denied', lastError: 'Permission request failed' });
       return null;
     }
-  }, []);
+  }, [updateDiagnostics]);
 
   // Send location to backend
   const sendLocation = useCallback(
@@ -115,6 +177,8 @@ export function useCapacitorGPS({
             )
           : pos.heading;
 
+      updateDiagnostics({ lastSendResult: 'pending' });
+
       try {
         console.log('[CapacitorGPS] Sending location:', {
           busId,
@@ -140,19 +204,34 @@ export function useCapacitorGPS({
 
         if (sendError) {
           console.error('[CapacitorGPS] Error sending location:', sendError);
+          updateDiagnostics({ 
+            lastSendResult: 'error', 
+            lastSendTime: now,
+            lastError: `Send failed: ${sendError.message || 'Unknown error'}`
+          });
         } else {
           console.log('[CapacitorGPS] Location sent successfully');
+          updateDiagnostics({ 
+            lastSendResult: 'success', 
+            lastSendTime: now,
+            lastError: null
+          });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('[CapacitorGPS] Failed to send location:', err);
+        updateDiagnostics({ 
+          lastSendResult: 'error', 
+          lastSendTime: now,
+          lastError: `Network error: ${err?.message || 'Unknown'}`
+        });
       }
     },
-    [busId, tripId, updateIntervalMs]
+    [busId, tripId, updateIntervalMs, updateDiagnostics]
   );
 
   // Handle position update
   const handlePositionUpdate = useCallback(
-    (position: Position) => {
+    (position: Position, provider: 'high_accuracy' | 'low_accuracy' | 'cached' = 'cached') => {
       const newPosition: GPSPosition = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -162,25 +241,166 @@ export function useCapacitorGPS({
         timestamp: position.timestamp,
       };
 
-      console.log('[CapacitorGPS] Position update:', newPosition);
+      fixCountRef.current += 1;
+      const now = Date.now();
+      const lastFixAge = lastFixRef.current 
+        ? Math.round((now - lastFixRef.current.timestamp) / 1000) 
+        : null;
+
+      console.log(`[CapacitorGPS] Position update #${fixCountRef.current}:`, {
+        ...newPosition,
+        provider,
+        lastFixAge
+      });
+
       setPosition(newPosition);
+      saveLastKnownPosition(newPosition);
+      setError(null);
+      
+      updateDiagnostics({
+        fixCount: fixCountRef.current,
+        lastFixAge: 0,
+        provider,
+        lastError: null,
+      });
+
+      // If we're in warming_up stage and got a fix, move to tracking
+      if (stage === 'warming_up' || stage === 'acquiring') {
+        setStage('tracking');
+        updateDiagnostics({ stage: 'tracking' });
+      }
+
       sendLocation(newPosition);
       lastFixRef.current = newPosition;
     },
-    [sendLocation]
+    [sendLocation, stage, updateDiagnostics]
   );
 
-  // Start tracking
+  // Stop any existing watch
+  const clearExistingWatch = useCallback(async () => {
+    if (watchIdRef.current) {
+      try {
+        await Geolocation.clearWatch({ id: watchIdRef.current });
+        console.log('[CapacitorGPS] Cleared existing watch:', watchIdRef.current);
+      } catch (err) {
+        console.warn('[CapacitorGPS] Error clearing watch:', err);
+      }
+      watchIdRef.current = null;
+    }
+    if (warmUpTimeoutRef.current) {
+      clearTimeout(warmUpTimeoutRef.current);
+      warmUpTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Stage 1: Warm-up phase - try to get a quick cached/low-accuracy fix
+  const warmUpPhase = useCallback(async (): Promise<boolean> => {
+    console.log('[CapacitorGPS] Starting warm-up phase...');
+    setStage('warming_up');
+    updateDiagnostics({ stage: 'warming_up' });
+
+    try {
+      // Try cached position first (fastest)
+      const cachedPosition = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 120000, // Accept positions up to 2 minutes old
+      });
+      
+      console.log('[CapacitorGPS] Warm-up: got cached/low-accuracy fix');
+      handlePositionUpdate(cachedPosition, 'cached');
+      return true;
+    } catch (err: any) {
+      console.log('[CapacitorGPS] Warm-up: no cached fix available, continuing...');
+      // Don't treat this as an error - just means no cached position
+    }
+
+    // Try low accuracy fresh position
+    try {
+      const lowAccuracyPosition = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 0,
+      });
+      
+      console.log('[CapacitorGPS] Warm-up: got low-accuracy fix');
+      handlePositionUpdate(lowAccuracyPosition, 'low_accuracy');
+      return true;
+    } catch (err: any) {
+      console.log('[CapacitorGPS] Warm-up: low accuracy failed:', err?.message);
+    }
+
+    return false;
+  }, [handlePositionUpdate, updateDiagnostics]);
+
+  // Stage 2: Start continuous watch
+  const startWatch = useCallback(async (highAccuracy: boolean) => {
+    console.log(`[CapacitorGPS] Starting watch (highAccuracy: ${highAccuracy})...`);
+    watchAttemptsRef.current += 1;
+    updateDiagnostics({ watchAttempts: watchAttemptsRef.current });
+
+    try {
+      const watchId = await Geolocation.watchPosition(
+        {
+          enableHighAccuracy: highAccuracy,
+          timeout: 60000,
+          maximumAge: highAccuracy ? 0 : 30000,
+        },
+        (position, err) => {
+          if (err) {
+            const msg = err.message || 'Location error';
+            console.error('[CapacitorGPS] Watch callback error:', err);
+
+            // Timeouts are common - don't stop tracking
+            if (/timeout|obtain location/i.test(msg)) {
+              console.log('[CapacitorGPS] Timeout - GPS still acquiring...');
+              updateDiagnostics({ 
+                lastError: 'GPS acquiring signal...',
+                stage: 'acquiring'
+              });
+              setStage('acquiring');
+              return;
+            }
+
+            // Other errors
+            updateDiagnostics({ lastError: msg });
+            setError(msg);
+            return;
+          }
+          
+          if (position) {
+            handlePositionUpdate(position, highAccuracy ? 'high_accuracy' : 'low_accuracy');
+          }
+        }
+      );
+
+      watchIdRef.current = watchId;
+      console.log('[CapacitorGPS] Watch started, ID:', watchId);
+      return true;
+    } catch (err: any) {
+      console.error('[CapacitorGPS] Failed to start watch:', err);
+      updateDiagnostics({ lastError: err?.message || 'Watch failed' });
+      return false;
+    }
+  }, [handlePositionUpdate, updateDiagnostics]);
+
+  // Main start tracking function with staged approach
   const startTracking = useCallback(async () => {
-    console.log('[CapacitorGPS] startTracking called', { busId, tripId, isTracking });
+    console.log('[CapacitorGPS] startTracking called', { busId, tripId, isTracking, stage });
 
     if (!busId) {
       console.log('[CapacitorGPS] No bus ID, cannot start tracking');
       setError('No bus assigned');
+      updateDiagnostics({ lastError: 'No bus assigned' });
       return;
     }
 
+    // Clear any existing watch first
+    await clearExistingWatch();
+
     setError(null);
+    fixCountRef.current = 0;
+    watchAttemptsRef.current = 0;
 
     try {
       // Check/request permissions first
@@ -189,97 +409,108 @@ export function useCapacitorGPS({
         status = await requestPermissions();
         if (status?.location !== 'granted') {
           setError('Location permission denied');
-          toast.error('Location permission denied. Please enable in settings.');
+          setStage('error');
+          updateDiagnostics({ stage: 'error', lastError: 'Permission denied' });
           return;
         }
       }
 
-      // Start watching position
-      const watchId = await Geolocation.watchPosition(
-        {
-          enableHighAccuracy: true,
-          timeout: 60000,
-          maximumAge: 0,
-        },
-        (position, err) => {
-          if (err) {
-            const msg = err.message || 'Location error';
-            console.error('[CapacitorGPS] Watch error:', err);
+      // Stage 1: Warm-up phase
+      const warmUpSuccess = await warmUpPhase();
+      
+      // Stage 2: Start continuous low-accuracy watch first (faster to get fixes)
+      console.log('[CapacitorGPS] Starting low-accuracy watch...');
+      let watchStarted = await startWatch(false);
+      
+      if (!watchStarted) {
+        console.log('[CapacitorGPS] Low-accuracy watch failed, trying high-accuracy...');
+        watchStarted = await startWatch(true);
+      }
 
-            // Timeouts are common on some Android devices when GPS is still warming up.
-            // Keep tracking running; only surface as a non-blocking warning.
-            if (/timeout|obtain location/i.test(msg)) {
-              toast.message('Waiting for GPS signal…');
-              return;
-            }
-
-            setError(msg);
-            return;
-          }
-          if (position) {
-            handlePositionUpdate(position);
-          }
+      if (watchStarted) {
+        setIsTracking(true);
+        if (!warmUpSuccess) {
+          setStage('acquiring');
+          updateDiagnostics({ stage: 'acquiring' });
         }
-      );
+        
+        // After 30 seconds of successful tracking, upgrade to high accuracy
+        warmUpTimeoutRef.current = setTimeout(async () => {
+          if (fixCountRef.current >= 2 && watchIdRef.current) {
+            console.log('[CapacitorGPS] Upgrading to high-accuracy watch...');
+            await clearExistingWatch();
+            await startWatch(true);
+          }
+        }, 30000);
 
-      watchIdRef.current = watchId;
-      setIsTracking(true);
-      toast.success('GPS tracking started');
-      console.log('[CapacitorGPS] Tracking started, watchId:', watchId);
+        console.log('[CapacitorGPS] Tracking started successfully');
+      } else {
+        setError('Failed to start GPS watch');
+        setStage('error');
+        updateDiagnostics({ stage: 'error', lastError: 'Watch start failed' });
+      }
     } catch (err: any) {
       console.error('[CapacitorGPS] Start tracking error:', err);
       setError(err?.message || 'Failed to start GPS tracking');
-      toast.error('Failed to start GPS tracking');
+      setStage('error');
+      updateDiagnostics({ stage: 'error', lastError: err?.message });
     }
-  }, [busId, tripId, isTracking, checkPermissions, requestPermissions, handlePositionUpdate]);
+  }, [busId, tripId, isTracking, stage, checkPermissions, requestPermissions, warmUpPhase, startWatch, clearExistingWatch, updateDiagnostics]);
 
   // Stop tracking
   const stopTracking = useCallback(async () => {
-    if (watchIdRef.current) {
-      try {
-        await Geolocation.clearWatch({ id: watchIdRef.current });
-        console.log('[CapacitorGPS] Watch cleared');
-      } catch (err) {
-        console.error('[CapacitorGPS] Error clearing watch:', err);
-      }
-      watchIdRef.current = null;
-    }
-
+    await clearExistingWatch();
     setIsTracking(false);
-    toast.info('GPS tracking stopped');
-  }, []);
+    setStage('idle');
+    updateDiagnostics({ stage: 'idle' });
+    console.log('[CapacitorGPS] Tracking stopped');
+  }, [clearExistingWatch, updateDiagnostics]);
 
-  // Get current position once
+  // Get current position once (for manual refresh)
   const getCurrentPosition = useCallback(async () => {
+    console.log('[CapacitorGPS] Getting current position...');
+    
+    // Try high accuracy first
     try {
-      // Try high accuracy first
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
-        timeout: 60000,
+        timeout: 30000,
         maximumAge: 0,
       });
-      handlePositionUpdate(position);
+      handlePositionUpdate(position, 'high_accuracy');
       return position;
     } catch (err: any) {
-      const msg = err?.message || 'Failed to get current position';
-      console.error('[CapacitorGPS] Get position error (high accuracy):', err);
-
-      // Fallback: lower accuracy, longer cache window (helps on cold GPS start)
-      try {
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: false,
-          timeout: 60000,
-          maximumAge: 60000,
-        });
-        handlePositionUpdate(position);
-        return position;
-      } catch (err2: any) {
-        console.error('[CapacitorGPS] Get position error (fallback):', err2);
-        setError(msg);
-        return null;
-      }
+      console.log('[CapacitorGPS] High accuracy failed, trying low accuracy...');
     }
-  }, [handlePositionUpdate]);
+
+    // Fallback to low accuracy
+    try {
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 30000,
+        maximumAge: 30000,
+      });
+      handlePositionUpdate(position, 'low_accuracy');
+      return position;
+    } catch (err: any) {
+      console.error('[CapacitorGPS] getCurrentPosition failed:', err);
+      updateDiagnostics({ lastError: err?.message || 'Position request failed' });
+      setError(err?.message || 'Failed to get current position');
+      return null;
+    }
+  }, [handlePositionUpdate, updateDiagnostics]);
+
+  // Update lastFixAge periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastFixRef.current) {
+        const age = Math.round((Date.now() - lastFixRef.current.timestamp) / 1000);
+        setDiagnostics(prev => ({ ...prev, lastFixAge: age }));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-start/stop based on enabled prop
   useEffect(() => {
@@ -299,7 +530,7 @@ export function useCapacitorGPS({
         Geolocation.clearWatch({ id: watchIdRef.current }).catch(console.error);
       }
     };
-  }, [enabled, busId, isTracking, startTracking, stopTracking]);
+  }, [enabled, busId]); // Removed isTracking, startTracking, stopTracking from deps to prevent loops
 
   // Check permissions on mount
   useEffect(() => {
@@ -313,10 +544,11 @@ export function useCapacitorGPS({
     error,
     permissionStatus,
     isNative,
+    stage,
+    diagnostics,
     startTracking,
     stopTracking,
     getCurrentPosition,
     requestPermissions,
   };
 }
-
