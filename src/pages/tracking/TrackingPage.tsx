@@ -10,6 +10,7 @@ import { useRoutes } from '@/hooks/useRoutes';
 import { useMapboxToken } from '@/hooks/useMapboxToken';
 import { useRealtimeBusLocations } from '@/hooks/useGPSTracking';
 import MapboxMap from '@/components/tracking/MapboxMap';
+import GPSHealthIndicator from '@/components/tracking/GPSHealthIndicator';
 import { formatDistanceToNow } from 'date-fns';
 
 interface BusLocation {
@@ -160,6 +161,9 @@ export default function TrackingPage() {
           </Button>
         </div>
       </div>
+
+      {/* GPS Health Indicator */}
+      <GPSHealthIndicator locations={realtimeLocations} isConnected={isConnected} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Bus List */}
