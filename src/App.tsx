@@ -24,6 +24,7 @@ import MyBookingsPage from "./pages/passenger/MyBookingsPage";
 import SettingsPage from "./pages/settings/SettingsPage";
 import ReportsPage from "./pages/reports/ReportsPage";
 import TrackingPage from "./pages/tracking/TrackingPage";
+import StationsPage from "./pages/stations/StationsPage";
 
 const queryClient = new QueryClient();
 
@@ -46,13 +47,18 @@ const App = () => (
               
               {/* Admin & Staff routes */}
               <Route path="/fleet" element={
-                <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <FleetPage />
                 </ProtectedRoute>
               } />
               <Route path="/drivers" element={
-                <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <DriversPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/stations" element={
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'passenger']}>
+                  <StationsPage />
                 </ProtectedRoute>
               } />
               <Route path="/routes" element={

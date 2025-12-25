@@ -62,6 +62,13 @@ export interface Driver {
   profile?: Profile;
 }
 
+export interface State {
+  id: string;
+  name: string;
+  code: string;
+  created_at: string;
+}
+
 export interface Station {
   id: string;
   name: string;
@@ -71,8 +78,10 @@ export interface Station {
   latitude?: number;
   longitude?: number;
   is_active?: boolean;
+  state_id?: string;
   created_at: string;
   updated_at: string;
+  state?: State;
 }
 
 export interface Route {

@@ -31,6 +31,7 @@ import {
   LogOut,
   ChevronDown,
   Headphones,
+  Building2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ const menuItems = {
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
     { title: 'Fleet Management', url: '/fleet', icon: Bus },
     { title: 'Drivers', url: '/drivers', icon: Users },
+    { title: 'Stations', url: '/stations', icon: Building2 },
     { title: 'Routes', url: '/routes', icon: Route },
     { title: 'Schedules', url: '/schedules', icon: Calendar },
     { title: 'Bookings', url: '/bookings', icon: Ticket },
@@ -64,6 +66,7 @@ const menuItems = {
   ],
   passenger: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'Stations', url: '/stations', icon: Building2 },
     { title: 'Book Ticket', url: '/book', icon: Ticket },
     { title: 'My Bookings', url: '/my-bookings', icon: Calendar },
     { title: 'Track Bus', url: '/tracking', icon: MapPin },
@@ -84,7 +87,7 @@ const menuItems = {
   ],
   staff: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Fleet', url: '/fleet', icon: Bus },
+    { title: 'Stations', url: '/stations', icon: Building2 },
     { title: 'Routes', url: '/routes', icon: Route },
     { title: 'Schedules', url: '/schedules', icon: Calendar },
     { title: 'Bookings', url: '/bookings', icon: Ticket },
