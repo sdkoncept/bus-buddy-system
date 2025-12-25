@@ -198,8 +198,8 @@ export function useCapacitorGPS({
       const watchId = await Geolocation.watchPosition(
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 5000,
+          timeout: 30000,
+          maximumAge: 10000,
         },
         (position, err) => {
           if (err) {
@@ -245,7 +245,7 @@ export function useCapacitorGPS({
     try {
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 30000,
       });
       handlePositionUpdate(position);
       return position;
