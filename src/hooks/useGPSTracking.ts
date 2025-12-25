@@ -167,6 +167,7 @@ export function useGPSTracking({
 // Hook for subscribing to realtime bus locations
 export function useRealtimeBusLocations() {
   const [locations, setLocations] = useState<Map<string, any>>(new Map());
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     // Initial fetch
@@ -188,6 +189,7 @@ export function useRealtimeBusLocations() {
           }
         });
         setLocations(locationMap);
+        console.log('Fetched initial bus locations:', locationMap.size);
       }
     };
 
@@ -214,12 +216,15 @@ export function useRealtimeBusLocations() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  return { locations: Array.from(locations.values()) };
+  return { locations: Array.from(locations.values()), isConnected };
 }
