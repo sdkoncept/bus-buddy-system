@@ -489,6 +489,140 @@ export type Database = {
           },
         ]
       }
+      job_card_faults: {
+        Row: {
+          created_at: string
+          description: string
+          diagnosis: string | null
+          fault_category: string
+          fault_code: string | null
+          id: string
+          job_card_id: string
+          labor_hours: number | null
+          logged_by: string
+          parts_used: Json | null
+          repair_action: string | null
+          repair_status: Database["public"]["Enums"]["fault_repair_status"]
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          diagnosis?: string | null
+          fault_category: string
+          fault_code?: string | null
+          id?: string
+          job_card_id: string
+          labor_hours?: number | null
+          logged_by: string
+          parts_used?: Json | null
+          repair_action?: string | null
+          repair_status?: Database["public"]["Enums"]["fault_repair_status"]
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          diagnosis?: string | null
+          fault_category?: string
+          fault_code?: string | null
+          id?: string
+          job_card_id?: string
+          labor_hours?: number | null
+          logged_by?: string
+          parts_used?: Json | null
+          repair_action?: string | null
+          repair_status?: Database["public"]["Enums"]["fault_repair_status"]
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_card_faults_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_cards: {
+        Row: {
+          actual_completion: string | null
+          bus_id: string
+          created_at: string
+          customer_complaint: string | null
+          driver_id: string | null
+          estimated_completion: string | null
+          id: string
+          job_card_number: string
+          mechanic_id: string
+          notes: string | null
+          odometer_reading: number
+          priority: string
+          reason_for_visit: string
+          status: Database["public"]["Enums"]["job_card_status"]
+          total_cost: number | null
+          total_labor_hours: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_completion?: string | null
+          bus_id: string
+          created_at?: string
+          customer_complaint?: string | null
+          driver_id?: string | null
+          estimated_completion?: string | null
+          id?: string
+          job_card_number: string
+          mechanic_id: string
+          notes?: string | null
+          odometer_reading: number
+          priority?: string
+          reason_for_visit: string
+          status?: Database["public"]["Enums"]["job_card_status"]
+          total_cost?: number | null
+          total_labor_hours?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_completion?: string | null
+          bus_id?: string
+          created_at?: string
+          customer_complaint?: string | null
+          driver_id?: string | null
+          estimated_completion?: string | null
+          id?: string
+          job_card_number?: string
+          mechanic_id?: string
+          notes?: string | null
+          odometer_reading?: number
+          priority?: string
+          reason_for_visit?: string
+          status?: Database["public"]["Enums"]["job_card_status"]
+          total_cost?: number | null
+          total_labor_hours?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_cards_bus_id_fkey"
+            columns: ["bus_id"]
+            isOneToOne: false
+            referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_cards_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_records: {
         Row: {
           bus_id: string
@@ -1383,6 +1517,92 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_inspections: {
+        Row: {
+          battery_condition: string | null
+          created_at: string
+          exterior_condition: Json | null
+          fluid_levels: Json | null
+          fuel_level: string | null
+          horn_working: boolean | null
+          id: string
+          inspected_at: string
+          inspected_by: string
+          inspection_type: string
+          interior_condition: string | null
+          job_card_id: string
+          lights_working: boolean | null
+          mirrors_condition: string | null
+          notes: string | null
+          personal_items: string | null
+          photos: Json | null
+          spare_tire: Json | null
+          tire_front_left: Json | null
+          tire_front_right: Json | null
+          tire_rear_left: Json | null
+          tire_rear_right: Json | null
+          wipers_working: boolean | null
+        }
+        Insert: {
+          battery_condition?: string | null
+          created_at?: string
+          exterior_condition?: Json | null
+          fluid_levels?: Json | null
+          fuel_level?: string | null
+          horn_working?: boolean | null
+          id?: string
+          inspected_at?: string
+          inspected_by: string
+          inspection_type?: string
+          interior_condition?: string | null
+          job_card_id: string
+          lights_working?: boolean | null
+          mirrors_condition?: string | null
+          notes?: string | null
+          personal_items?: string | null
+          photos?: Json | null
+          spare_tire?: Json | null
+          tire_front_left?: Json | null
+          tire_front_right?: Json | null
+          tire_rear_left?: Json | null
+          tire_rear_right?: Json | null
+          wipers_working?: boolean | null
+        }
+        Update: {
+          battery_condition?: string | null
+          created_at?: string
+          exterior_condition?: Json | null
+          fluid_levels?: Json | null
+          fuel_level?: string | null
+          horn_working?: boolean | null
+          id?: string
+          inspected_at?: string
+          inspected_by?: string
+          inspection_type?: string
+          interior_condition?: string | null
+          job_card_id?: string
+          lights_working?: boolean | null
+          mirrors_condition?: string | null
+          notes?: string | null
+          personal_items?: string | null
+          photos?: Json | null
+          spare_tire?: Json | null
+          tire_front_left?: Json | null
+          tire_front_right?: Json | null
+          tire_rear_left?: Json | null
+          tire_rear_right?: Json | null
+          wipers_working?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_inspections_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
           assigned_to: string | null
@@ -1472,7 +1692,15 @@ export type Database = {
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"
       bus_status: "active" | "maintenance" | "out_of_service"
       complaint_status: "open" | "in_progress" | "resolved" | "closed"
+      fault_repair_status: "pending" | "in_progress" | "completed" | "deferred"
       incident_severity: "low" | "medium" | "high" | "critical"
+      job_card_status:
+        | "draft"
+        | "inspection_complete"
+        | "in_progress"
+        | "awaiting_parts"
+        | "completed"
+        | "closed"
       maintenance_status:
         | "scheduled"
         | "in_progress"
@@ -1630,7 +1858,16 @@ export const Constants = {
       booking_status: ["pending", "confirmed", "cancelled", "completed"],
       bus_status: ["active", "maintenance", "out_of_service"],
       complaint_status: ["open", "in_progress", "resolved", "closed"],
+      fault_repair_status: ["pending", "in_progress", "completed", "deferred"],
       incident_severity: ["low", "medium", "high", "critical"],
+      job_card_status: [
+        "draft",
+        "inspection_complete",
+        "in_progress",
+        "awaiting_parts",
+        "completed",
+        "closed",
+      ],
       maintenance_status: [
         "scheduled",
         "in_progress",
