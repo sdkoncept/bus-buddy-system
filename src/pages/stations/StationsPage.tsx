@@ -59,6 +59,8 @@ const StationsPage = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const pendingFlyToRef = useRef<any>(null);
 
   // Filter stations by state
   const filteredStations = stations?.filter(s => 
@@ -80,9 +82,26 @@ const StationsPage = () => {
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+    map.current.on('load', () => {
+      console.log('Map loaded');
+      setMapLoaded(true);
+      
+      // Execute pending flyTo if any
+      if (pendingFlyToRef.current && map.current) {
+        const { lng, lat } = pendingFlyToRef.current;
+        map.current.flyTo({
+          center: [lng, lat],
+          zoom: 14,
+          duration: 1500,
+        });
+        pendingFlyToRef.current = null;
+      }
+    });
+
     return () => {
       map.current?.remove();
       map.current = null;
+      setMapLoaded(false);
     };
   }, [mapboxToken]);
 
@@ -129,7 +148,7 @@ const StationsPage = () => {
           .addTo(map.current!);
 
         el.addEventListener('click', () => {
-          setSelectedStation(station);
+          flyToStation(station);
         });
 
         markersRef.current.push(marker);
@@ -201,22 +220,32 @@ const StationsPage = () => {
     }
   };
 
-  const flyToStation = (station: any) => {
-    console.log('flyToStation called:', station.name, 'map.current:', !!map.current, 'coords:', station.latitude, station.longitude);
-    if (station.latitude && station.longitude) {
-      if (map.current) {
-        map.current.flyTo({
-          center: [station.longitude, station.latitude],
-          zoom: 14,
-          duration: 1500,
-        });
-      }
-      setSelectedStation(station);
-    } else {
-      // Still select even if no coordinates
-      setSelectedStation(station);
+  const flyToStation = useCallback((station: any) => {
+    // Always select the station first
+    setSelectedStation(station);
+    
+    // Coerce coordinates to numbers
+    const lat = Number(station.latitude);
+    const lng = Number(station.longitude);
+    
+    console.log('flyToStation:', station.name, 'mapLoaded:', mapLoaded, 'coords:', lat, lng, 'valid:', Number.isFinite(lat) && Number.isFinite(lng));
+    
+    // Only try to fly if coordinates are valid numbers
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return;
     }
-  };
+    
+    if (map.current && mapLoaded) {
+      map.current.flyTo({
+        center: [lng, lat],
+        zoom: 14,
+        duration: 1500,
+      });
+    } else {
+      // Store pending flyTo for when map loads
+      pendingFlyToRef.current = { lng, lat };
+    }
+  }, [mapLoaded]);
 
   if (statesLoading || stationsLoading) {
     return (

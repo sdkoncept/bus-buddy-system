@@ -37,7 +37,13 @@ export function useStationsWithState() {
         .order('name', { ascending: true });
       
       if (error) throw error;
-      return data;
+      
+      // Normalize coordinates to numbers to prevent string issues
+      return data?.map(station => ({
+        ...station,
+        latitude: station.latitude != null ? Number(station.latitude) : null,
+        longitude: station.longitude != null ? Number(station.longitude) : null,
+      })) || [];
     },
   });
 }
@@ -59,7 +65,13 @@ export function useStationsByState(stateId: string | null) {
         .order('name', { ascending: true });
       
       if (error) throw error;
-      return data;
+      
+      // Normalize coordinates to numbers
+      return data?.map(station => ({
+        ...station,
+        latitude: station.latitude != null ? Number(station.latitude) : null,
+        longitude: station.longitude != null ? Number(station.longitude) : null,
+      })) || [];
     },
     enabled: !!stateId,
   });
