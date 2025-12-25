@@ -1612,6 +1612,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          job_card_id: string | null
           maintenance_id: string | null
           priority: string | null
           status: Database["public"]["Enums"]["work_order_status"]
@@ -1626,6 +1627,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          job_card_id?: string | null
           maintenance_id?: string | null
           priority?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
@@ -1640,6 +1642,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          job_card_id?: string | null
           maintenance_id?: string | null
           priority?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
@@ -1652,6 +1655,13 @@ export type Database = {
             columns: ["bus_id"]
             isOneToOne: false
             referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
             referencedColumns: ["id"]
           },
           {

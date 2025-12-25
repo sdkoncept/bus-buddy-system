@@ -155,10 +155,68 @@ export function useUpdateWorkOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['my-work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['job-card-work-orders'] });
       toast.success('Work order updated');
     },
     onError: (error) => {
       toast.error('Failed to update work order: ' + error.message);
+    },
+  });
+}
+
+// Job Card Work Orders
+export function useJobCardWorkOrders(jobCardId: string) {
+  return useQuery({
+    queryKey: ['job-card-work-orders', jobCardId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          bus:buses(*)
+        `)
+        .eq('job_card_id', jobCardId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as WorkOrder[];
+    },
+    enabled: !!jobCardId,
+  });
+}
+
+export function useCreateJobCardWorkOrder() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (order: { 
+      job_card_id: string; 
+      bus_id: string; 
+      title: string; 
+      description?: string; 
+      priority?: string;
+      due_date?: string;
+      assigned_to?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .insert({
+          ...order,
+          status: 'pending',
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['job-card-work-orders', variables.job_card_id] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      toast.success('Work order created');
+    },
+    onError: (error) => {
+      toast.error('Failed to create work order: ' + error.message);
     },
   });
 }

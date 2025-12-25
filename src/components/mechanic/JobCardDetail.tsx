@@ -12,8 +12,10 @@ import {
   useVehicleInspections,
   useJobCardFaults 
 } from '@/hooks/useJobCards';
+import { useJobCardWorkOrders } from '@/hooks/useMaintenance';
 import { VehicleInspectionForm } from './VehicleInspectionForm';
 import { FaultLogSection } from './FaultLogSection';
+import { WorkOrdersTab } from './WorkOrdersTab';
 import { 
   ArrowLeft, 
   Car, 
@@ -23,7 +25,8 @@ import {
   AlertTriangle,
   Wrench,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  ClipboardList
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -52,6 +55,7 @@ export function JobCardDetail({ jobCard, onBack }: JobCardDetailProps) {
   const updateJobCard = useUpdateJobCard();
   const { data: inspections } = useVehicleInspections(jobCard.id);
   const { data: faults } = useJobCardFaults(jobCard.id);
+  const { data: workOrders } = useJobCardWorkOrders(jobCard.id);
   const [activeTab, setActiveTab] = useState('overview');
 
   const hasInspection = inspections && inspections.length > 0;
@@ -122,6 +126,15 @@ export function JobCardDetail({ jobCard, onBack }: JobCardDetailProps) {
             {faults && faults.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                 {faults.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="work-orders" className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Work Orders
+            {workOrders && workOrders.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                {workOrders.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -302,6 +315,10 @@ export function JobCardDetail({ jobCard, onBack }: JobCardDetailProps) {
 
         <TabsContent value="faults">
           <FaultLogSection jobCardId={jobCard.id} />
+        </TabsContent>
+
+        <TabsContent value="work-orders">
+          <WorkOrdersTab jobCardId={jobCard.id} busId={jobCard.bus_id} />
         </TabsContent>
       </Tabs>
     </div>

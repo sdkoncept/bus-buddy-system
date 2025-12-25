@@ -292,6 +292,7 @@ export interface MaintenanceRecord {
 export interface WorkOrder {
   id: string;
   maintenance_id?: string;
+  job_card_id?: string;
   bus_id: string;
   assigned_to?: string;
   title: string;
