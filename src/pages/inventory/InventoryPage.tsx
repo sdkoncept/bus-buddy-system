@@ -112,7 +112,7 @@ export default function InventoryPage() {
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
           <TabsTrigger value="requests" className="gap-1">
             <ClipboardList className="h-4 w-4" />
-            Parts Requests
+            Parts Requisition
           </TabsTrigger>
         </TabsList>
 
