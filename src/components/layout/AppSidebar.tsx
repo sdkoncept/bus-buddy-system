@@ -67,7 +67,7 @@ const menuItems = {
   driver: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
     { title: 'My Trips', url: '/driver/trips', icon: Navigation },
-    { title: 'Passengers', url: '/driver/passengers', icon: Users },
+    { title: 'Passenger Manifest', url: '/driver/passengers', icon: ClipboardList },
     { title: 'Incidents', url: '/driver/incidents', icon: AlertTriangle },
     { title: 'Settings', url: '/settings', icon: Settings },
   ],
