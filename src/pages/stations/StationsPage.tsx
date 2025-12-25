@@ -164,22 +164,22 @@ const StationsPage = () => {
     const filterChanged = lastFilterKeyRef.current !== currentFilterKey;
     lastFilterKeyRef.current = currentFilterKey;
 
-    // Skip fitBounds if user just clicked a station
+    // Skip fitBounds if user just clicked a station (but still keep markers rendered)
+    const shouldFitBounds = !skipFitBoundsRef.current;
     if (skipFitBoundsRef.current) {
       skipFitBoundsRef.current = false;
-      return;
     }
 
     // Fit bounds only when filter changes or initial load
     const stationsWithCoords = filteredStations.filter(s => s.latitude && s.longitude);
-    if (stationsWithCoords.length > 0 && map.current && filterChanged) {
+    if (shouldFitBounds && stationsWithCoords.length > 0 && map.current && filterChanged) {
       const bounds = new mapboxgl.LngLatBounds();
       stationsWithCoords.forEach(s => {
         bounds.extend([s.longitude!, s.latitude!]);
       });
       map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
     }
-  }, [filteredStations, selectedState]);
+  }, [filteredStations, selectedState, mapLoaded]);
 
   const handleOpenDialog = (station?: any) => {
     if (station) {
