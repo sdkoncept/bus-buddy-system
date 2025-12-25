@@ -75,6 +75,13 @@ export default function UserManagementPage() {
     fullName: '',
     phone: '',
     role: 'passenger' as AppRole,
+    // Driver-specific fields
+    license_number: '',
+    license_expiry: '',
+    date_of_birth: '',
+    address: '',
+    emergency_contact: '',
+    emergency_phone: '',
   });
 
   const filteredUsers = users?.filter(user => {
@@ -122,12 +129,22 @@ export default function UserManagementPage() {
   };
 
   const handleCreateUser = async () => {
+    const driverDetails = createForm.role === 'driver' ? {
+      license_number: createForm.license_number,
+      license_expiry: createForm.license_expiry,
+      date_of_birth: createForm.date_of_birth || undefined,
+      address: createForm.address || undefined,
+      emergency_contact: createForm.emergency_contact || undefined,
+      emergency_phone: createForm.emergency_phone || undefined,
+    } : undefined;
+
     await createUser.mutateAsync({
       email: createForm.email,
       password: createForm.password,
       fullName: createForm.fullName,
       phone: createForm.phone || undefined,
       role: createForm.role,
+      driverDetails,
     });
 
     setIsCreateDialogOpen(false);
@@ -137,6 +154,12 @@ export default function UserManagementPage() {
       fullName: '',
       phone: '',
       role: 'passenger',
+      license_number: '',
+      license_expiry: '',
+      date_of_birth: '',
+      address: '',
+      emergency_contact: '',
+      emergency_phone: '',
     });
   };
 
@@ -459,6 +482,79 @@ export default function UserManagementPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Driver-specific fields */}
+            {createForm.role === 'driver' && (
+              <>
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-sm font-medium mb-4">Driver Details</h4>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="license-number">License Number *</Label>
+                        <Input
+                          id="license-number"
+                          value={createForm.license_number}
+                          onChange={(e) => setCreateForm({ ...createForm, license_number: e.target.value })}
+                          placeholder="DL-12345678"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="license-expiry">License Expiry *</Label>
+                        <Input
+                          id="license-expiry"
+                          type="date"
+                          value={createForm.license_expiry}
+                          onChange={(e) => setCreateForm({ ...createForm, license_expiry: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="dob">Date of Birth</Label>
+                        <Input
+                          id="dob"
+                          type="date"
+                          value={createForm.date_of_birth}
+                          onChange={(e) => setCreateForm({ ...createForm, date_of_birth: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="driver-address">Address</Label>
+                        <Input
+                          id="driver-address"
+                          value={createForm.address}
+                          onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+                          placeholder="Full address"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="emergency-contact">Emergency Contact</Label>
+                        <Input
+                          id="emergency-contact"
+                          value={createForm.emergency_contact}
+                          onChange={(e) => setCreateForm({ ...createForm, emergency_contact: e.target.value })}
+                          placeholder="Contact name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="emergency-phone">Emergency Phone</Label>
+                        <Input
+                          id="emergency-phone"
+                          value={createForm.emergency_phone}
+                          onChange={(e) => setCreateForm({ ...createForm, emergency_phone: e.target.value })}
+                          placeholder="Phone number"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -466,7 +562,13 @@ export default function UserManagementPage() {
             </Button>
             <Button 
               onClick={handleCreateUser}
-              disabled={createUser.isPending || !createForm.email || !createForm.password || !createForm.fullName}
+              disabled={
+                createUser.isPending || 
+                !createForm.email || 
+                !createForm.password || 
+                !createForm.fullName ||
+                (createForm.role === 'driver' && (!createForm.license_number || !createForm.license_expiry))
+              }
             >
               Create User
             </Button>
