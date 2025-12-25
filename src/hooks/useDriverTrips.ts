@@ -145,8 +145,10 @@ export function useStartTrip() {
       if (error) throw error;
       return data?.[0];
     },
-    onSuccess: () => {
+    onSuccess: (_data, tripId) => {
       queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-upcoming-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['trip-detail', tripId] });
       toast.success('Trip started successfully');
     },
     onError: (error) => {
@@ -175,8 +177,10 @@ export function useEndTrip() {
       if (error) throw error;
       return data?.[0];
     },
-    onSuccess: () => {
+    onSuccess: (_data, tripId) => {
       queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-upcoming-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['trip-detail', tripId] });
       toast.success('Trip completed successfully');
     },
     onError: (error) => {

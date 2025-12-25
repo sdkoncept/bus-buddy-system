@@ -34,22 +34,22 @@ serve(async (req) => {
         trip_id: tripId || null,
         latitude,
         longitude,
-        speed: speed || null,
-        heading: heading || null,
+        speed: speed ?? null,
+        heading: heading ?? null,
         recorded_at: new Date().toISOString(),
       })
-      .select()
-      .single();
+      .select('id');
 
     if (error) {
       console.error('Error inserting location:', error);
       throw error;
     }
 
-    console.log('Location updated successfully:', data.id);
+    const insertedId = data?.[0]?.id;
+    console.log('Location updated successfully:', insertedId);
 
     return new Response(
-      JSON.stringify({ success: true, id: data.id }),
+      JSON.stringify({ success: true, id: insertedId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
