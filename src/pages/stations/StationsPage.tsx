@@ -134,21 +134,43 @@ const StationsPage = () => {
           align-items: center;
           justify-content: center;
         `;
-        el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="hsl(var(--primary))"/></svg>`;
+        
+        // Create SVG element safely (no user data in innerHTML)
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '16');
+        svg.setAttribute('height', '16');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'white');
+        svg.innerHTML = '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="hsl(var(--primary))"/>';
+        el.appendChild(svg);
+
+        // Create popup content safely using DOM methods to prevent XSS
+        const popupContent = document.createElement('div');
+        popupContent.style.padding = '8px';
+        
+        const title = document.createElement('strong');
+        title.textContent = station.name;
+        popupContent.appendChild(title);
+        
+        const locationInfo = document.createElement('p');
+        locationInfo.style.cssText = 'margin: 4px 0 0; color: #666; font-size: 12px;';
+        const stateName = station.state?.name || '';
+        const cityText = station.city ? ` • ${station.city}` : '';
+        locationInfo.textContent = stateName + cityText;
+        popupContent.appendChild(locationInfo);
+        
+        if (station.address) {
+          const addressInfo = document.createElement('p');
+          addressInfo.style.cssText = 'margin: 4px 0 0; font-size: 12px;';
+          addressInfo.textContent = station.address;
+          popupContent.appendChild(addressInfo);
+        }
+
+        const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([station.longitude, station.latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25 }).setHTML(`
-              <div style="padding: 8px;">
-                <strong>${station.name}</strong>
-                <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
-                  ${station.state?.name || ''} ${station.city ? `• ${station.city}` : ''}
-                </p>
-                ${station.address ? `<p style="margin: 4px 0 0; font-size: 12px;">${station.address}</p>` : ''}
-              </div>
-            `)
-          )
+          .setPopup(popup)
           .addTo(map.current!);
 
         el.addEventListener('click', () => {
