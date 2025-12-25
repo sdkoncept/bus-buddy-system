@@ -27,6 +27,10 @@ import TrackingPage from "./pages/tracking/TrackingPage";
 import StationsPage from "./pages/stations/StationsPage";
 import JobCardsPage from "./pages/mechanic/JobCardsPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import DriverTripsPage from "./pages/driver/DriverTripsPage";
+import DriverTripDetailPage from "./pages/driver/DriverTripDetailPage";
+import DriverPassengersPage from "./pages/driver/DriverPassengersPage";
+import DriverIncidentsPage from "./pages/driver/DriverIncidentsPage";
 
 const queryClient = new QueryClient();
 
@@ -159,9 +163,24 @@ const App = () => (
               } />
               
               {/* Driver routes */}
-              <Route path="/trips" element={
+              <Route path="/driver/trips" element={
                 <ProtectedRoute allowedRoles={['admin', 'driver']}>
-                  <SchedulesPage />
+                  <DriverTripsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/trip/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'driver']}>
+                  <DriverTripDetailPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/passengers" element={
+                <ProtectedRoute allowedRoles={['admin', 'driver']}>
+                  <DriverPassengersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/incidents" element={
+                <ProtectedRoute allowedRoles={['admin', 'driver']}>
+                  <DriverIncidentsPage />
                 </ProtectedRoute>
               } />
             </Route>
