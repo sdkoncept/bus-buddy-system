@@ -6,33 +6,52 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { lazy, Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Eagerly loaded pages (critical path)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
-import FleetPage from "./pages/fleet/FleetPage";
-import DriversPage from "./pages/drivers/DriversPage";
-import RoutesPage from "./pages/routes/RoutesPage";
-import SchedulesPage from "./pages/schedules/SchedulesPage";
-import BookingsPage from "./pages/bookings/BookingsPage";
-import MaintenancePage from "./pages/maintenance/MaintenancePage";
-import InventoryPage from "./pages/inventory/InventoryPage";
-import AccountsPage from "./pages/accounts/AccountsPage";
-import CustomerServicePage from "./pages/customer-service/CustomerServicePage";
-import BookTicketPage from "./pages/passenger/BookTicketPage";
-import MyBookingsPage from "./pages/passenger/MyBookingsPage";
-import SettingsPage from "./pages/settings/SettingsPage";
-import ReportsPage from "./pages/reports/ReportsPage";
-import TrackingPage from "./pages/tracking/TrackingPage";
-import StationsPage from "./pages/stations/StationsPage";
-import JobCardsPage from "./pages/mechanic/JobCardsPage";
-import UserManagementPage from "./pages/admin/UserManagementPage";
-import DriverTripsPage from "./pages/driver/DriverTripsPage";
-import DriverTripDetailPage from "./pages/driver/DriverTripDetailPage";
-import DriverPassengersPage from "./pages/driver/DriverPassengersPage";
-import DriverIncidentsPage from "./pages/driver/DriverIncidentsPage";
+
+// Lazy loaded pages (code splitting)
+const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
+const DriversPage = lazy(() => import("./pages/drivers/DriversPage"));
+const RoutesPage = lazy(() => import("./pages/routes/RoutesPage"));
+const SchedulesPage = lazy(() => import("./pages/schedules/SchedulesPage"));
+const BookingsPage = lazy(() => import("./pages/bookings/BookingsPage"));
+const MaintenancePage = lazy(() => import("./pages/maintenance/MaintenancePage"));
+const InventoryPage = lazy(() => import("./pages/inventory/InventoryPage"));
+const AccountsPage = lazy(() => import("./pages/accounts/AccountsPage"));
+const CustomerServicePage = lazy(() => import("./pages/customer-service/CustomerServicePage"));
+const BookTicketPage = lazy(() => import("./pages/passenger/BookTicketPage"));
+const MyBookingsPage = lazy(() => import("./pages/passenger/MyBookingsPage"));
+const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
+const ReportsPage = lazy(() => import("./pages/reports/ReportsPage"));
+const TrackingPage = lazy(() => import("./pages/tracking/TrackingPage"));
+const StationsPage = lazy(() => import("./pages/stations/StationsPage"));
+const JobCardsPage = lazy(() => import("./pages/mechanic/JobCardsPage"));
+const UserManagementPage = lazy(() => import("./pages/admin/UserManagementPage"));
+const DriverTripsPage = lazy(() => import("./pages/driver/DriverTripsPage"));
+const DriverTripDetailPage = lazy(() => import("./pages/driver/DriverTripDetailPage"));
+const DriverPassengersPage = lazy(() => import("./pages/driver/DriverPassengersPage"));
+const DriverIncidentsPage = lazy(() => import("./pages/driver/DriverIncidentsPage"));
 
 const queryClient = new QueryClient();
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="p-6 space-y-4">
+    <Skeleton className="h-8 w-64" />
+    <Skeleton className="h-4 w-48" />
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-32" />
+      ))}
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -49,138 +68,188 @@ const App = () => (
             <Route element={<DashboardLayout />}>
               {/* Dashboard - accessible by all authenticated users */}
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings" element={
+                <Suspense fallback={<PageLoader />}>
+                  <SettingsPage />
+                </Suspense>
+              } />
               
               {/* Admin only routes */}
               <Route path="/users" element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <UserManagementPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <UserManagementPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Admin & Staff routes */}
               <Route path="/fleet" element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <FleetPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <FleetPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/drivers" element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <DriversPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <DriversPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/stations" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff', 'passenger']}>
-                  <StationsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <StationsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/routes" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff']}>
-                  <RoutesPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <RoutesPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/schedules" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff', 'driver']}>
-                  <SchedulesPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <SchedulesPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/bookings" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff']}>
-                  <BookingsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <BookingsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/tracking" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff', 'passenger']}>
-                  <TrackingPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <TrackingPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Maintenance - Admin, Staff, Mechanic */}
               <Route path="/maintenance" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff', 'mechanic']}>
-                  <MaintenancePage />
+                  <Suspense fallback={<PageLoader />}>
+                    <MaintenancePage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/work-orders" element={
                 <ProtectedRoute allowedRoles={['admin', 'mechanic']}>
-                  <MaintenancePage />
+                  <Suspense fallback={<PageLoader />}>
+                    <MaintenancePage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Inventory - Admin, Staff, Storekeeper, Mechanic */}
               <Route path="/inventory" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff', 'storekeeper', 'mechanic']}>
-                  <InventoryPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <InventoryPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/parts-requests" element={
                 <ProtectedRoute allowedRoles={['admin', 'storekeeper', 'mechanic']}>
-                  <InventoryPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <InventoryPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/job-cards" element={
                 <ProtectedRoute allowedRoles={['admin', 'mechanic']}>
-                  <JobCardsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <JobCardsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Accounts - Admin, Accounts */}
               <Route path="/accounts" element={
                 <ProtectedRoute allowedRoles={['admin', 'accounts']}>
-                  <AccountsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <AccountsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/payroll" element={
                 <ProtectedRoute allowedRoles={['admin', 'accounts']}>
-                  <AccountsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <AccountsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Customer Service - Admin, Staff */}
               <Route path="/customer-service" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff']}>
-                  <CustomerServicePage />
+                  <Suspense fallback={<PageLoader />}>
+                    <CustomerServicePage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Reports - Admin only */}
               <Route path="/reports" element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <ReportsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <ReportsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Passenger routes */}
               <Route path="/book" element={
                 <ProtectedRoute allowedRoles={['admin', 'staff', 'passenger']}>
-                  <BookTicketPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <BookTicketPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/my-bookings" element={
                 <ProtectedRoute allowedRoles={['admin', 'passenger']}>
-                  <MyBookingsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <MyBookingsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               
               {/* Driver routes */}
               <Route path="/driver/trips" element={
                 <ProtectedRoute allowedRoles={['admin', 'driver']}>
-                  <DriverTripsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <DriverTripsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/driver/trip/:id" element={
                 <ProtectedRoute allowedRoles={['admin', 'driver']}>
-                  <DriverTripDetailPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <DriverTripDetailPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/driver/passengers" element={
                 <ProtectedRoute allowedRoles={['admin', 'driver']}>
-                  <DriverPassengersPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <DriverPassengersPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
               <Route path="/driver/incidents" element={
                 <ProtectedRoute allowedRoles={['admin', 'driver']}>
-                  <DriverIncidentsPage />
+                  <Suspense fallback={<PageLoader />}>
+                    <DriverIncidentsPage />
+                  </Suspense>
                 </ProtectedRoute>
               } />
             </Route>

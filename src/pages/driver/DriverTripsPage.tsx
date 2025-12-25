@@ -18,12 +18,18 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { sampleTrips } from '@/data/sampleDriverData';
 
 export default function DriverTripsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
   const { data: trips, isLoading } = useDriverTrips(dateString);
   const navigate = useNavigate();
+
+  // Use sample data if no real trips exist
+  const displayTrips = trips && trips.length > 0 
+    ? trips 
+    : sampleTrips.filter(t => t.trip_date === dateString) as unknown as DriverTrip[];
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -130,9 +136,9 @@ export default function DriverTripsPage() {
             </Card>
           ))}
         </div>
-      ) : trips && trips.length > 0 ? (
+      ) : displayTrips && displayTrips.length > 0 ? (
         <div className="space-y-4">
-          {trips.map((trip) => (
+          {displayTrips.map((trip) => (
             <TripCard key={trip.id} trip={trip} />
           ))}
         </div>

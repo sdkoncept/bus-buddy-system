@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Bus, Users, Route, Ticket, TrendingUp, AlertTriangle } from 'lucide-react';
 import { PendingApprovalsWidget } from '@/components/dashboard/PendingApprovalsWidget';
 import { MechanicDashboard } from '@/components/dashboard/MechanicDashboard';
+import { DriverDashboard } from '@/components/dashboard/DriverDashboard';
 
 const stats = [
   { title: 'Total Buses', value: '12', icon: Bus, color: 'text-primary', change: '+2 this month' },
@@ -24,6 +25,11 @@ export default function Dashboard() {
   // Show mechanic-specific dashboard
   if (role === 'mechanic') {
     return <MechanicDashboard />;
+  }
+
+  // Show driver-specific dashboard
+  if (role === 'driver') {
+    return <DriverDashboard />;
   }
 
   // Default dashboard for other roles
