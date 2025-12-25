@@ -60,12 +60,12 @@ export default function TrackingPage() {
       
       activeBuses.forEach((bus: any) => {
         if (!newMap.has(bus.id)) {
-          // Initialize position for new bus
+          // Initialize position for new bus centered on Lagos, Nigeria
           const baseLatOffset = (Math.random() - 0.5) * 0.15;
           const baseLngOffset = (Math.random() - 0.5) * 0.15;
           newMap.set(bus.id, {
-            lat: -1.2921 + baseLatOffset,
-            lng: 36.8219 + baseLngOffset,
+            lat: 6.5244 + baseLatOffset, // Lagos latitude
+            lng: 3.3792 + baseLngOffset, // Lagos longitude
             heading: Math.floor(Math.random() * 360),
           });
           hasChanges = true;
@@ -103,13 +103,13 @@ export default function TrackingPage() {
         };
       }
       
-      // Fallback to simulated position
+      // Fallback to simulated position (Lagos, Nigeria)
       return {
         id: bus.id,
         registration_number: bus.registration_number,
         model: bus.model,
-        lat: simPos?.lat || -1.2921,
-        lng: simPos?.lng || 36.8219,
+        lat: simPos?.lat || 6.5244,
+        lng: simPos?.lng || 3.3792,
         speed: 45, // Fixed reasonable speed
         heading: simPos?.heading || 0,
         route: route ? {

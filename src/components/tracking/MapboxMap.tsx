@@ -49,8 +49,8 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [36.8219, -1.2921], // Nairobi, Kenya
-      zoom: 11,
+      center: [3.3792, 6.5244], // Lagos, Nigeria
+      zoom: 10,
       pitch: 0,
     });
 
