@@ -307,29 +307,31 @@ export function useCreateInspection() {
     mutationFn: async (input: CreateInspectionInput) => {
       if (!user?.id) throw new Error('User not authenticated');
 
+      const insertData = {
+        job_card_id: input.job_card_id,
+        inspection_type: input.inspection_type || 'pre_work',
+        fuel_level: input.fuel_level,
+        exterior_condition: input.exterior_condition || {},
+        interior_condition: input.interior_condition,
+        tire_front_left: input.tire_front_left || { condition: 'good', tread_depth: '', pressure: '' },
+        tire_front_right: input.tire_front_right || { condition: 'good', tread_depth: '', pressure: '' },
+        tire_rear_left: input.tire_rear_left || { condition: 'good', tread_depth: '', pressure: '' },
+        tire_rear_right: input.tire_rear_right || { condition: 'good', tread_depth: '', pressure: '' },
+        spare_tire: input.spare_tire || { present: true, condition: 'good' },
+        lights_working: input.lights_working,
+        horn_working: input.horn_working,
+        wipers_working: input.wipers_working,
+        mirrors_condition: input.mirrors_condition,
+        battery_condition: input.battery_condition,
+        fluid_levels: input.fluid_levels || { oil: 'ok', coolant: 'ok', brake_fluid: 'ok', power_steering: 'ok', windshield_washer: 'ok' },
+        personal_items: input.personal_items,
+        notes: input.notes,
+        inspected_by: user.id,
+      };
+
       const { data, error } = await supabase
         .from('vehicle_inspections')
-        .insert({
-          job_card_id: input.job_card_id,
-          inspection_type: input.inspection_type || 'pre_work',
-          fuel_level: input.fuel_level,
-          exterior_condition: input.exterior_condition || {},
-          interior_condition: input.interior_condition,
-          tire_front_left: input.tire_front_left || { condition: 'good', tread_depth: '', pressure: '' },
-          tire_front_right: input.tire_front_right || { condition: 'good', tread_depth: '', pressure: '' },
-          tire_rear_left: input.tire_rear_left || { condition: 'good', tread_depth: '', pressure: '' },
-          tire_rear_right: input.tire_rear_right || { condition: 'good', tread_depth: '', pressure: '' },
-          spare_tire: input.spare_tire || { present: true, condition: 'good' },
-          lights_working: input.lights_working,
-          horn_working: input.horn_working,
-          wipers_working: input.wipers_working,
-          mirrors_condition: input.mirrors_condition,
-          battery_condition: input.battery_condition,
-          fluid_levels: input.fluid_levels || { oil: 'ok', coolant: 'ok', brake_fluid: 'ok', power_steering: 'ok', windshield_washer: 'ok' },
-          personal_items: input.personal_items,
-          notes: input.notes,
-          inspected_by: user.id,
-        })
+        .insert(insertData as never)
         .select()
         .single();
 
