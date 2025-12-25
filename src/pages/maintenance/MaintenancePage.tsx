@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMaintenanceRecords, useCreateMaintenanceRecord, useWorkOrders } from '@/hooks/useMaintenance';
 import { useBuses } from '@/hooks/useBuses';
+import { MaintenanceRecord } from '@/types/database';
+import { MaintenanceRecordDetail } from '@/components/maintenance/MaintenanceRecordDetail';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Wrench, Search, Calendar } from 'lucide-react';
+import { Plus, Wrench, Search, Calendar, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/currency';
 
@@ -23,6 +25,7 @@ export default function MaintenancePage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<MaintenanceRecord | null>(null);
 
   const [form, setForm] = useState({
     bus_id: '',
@@ -76,6 +79,14 @@ export default function MaintenancePage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Record Detail Dialog */}
+      {selectedRecord && (
+        <MaintenanceRecordDetail 
+          record={selectedRecord} 
+          onClose={() => setSelectedRecord(null)} 
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Maintenance</h1>
@@ -258,17 +269,35 @@ export default function MaintenancePage() {
                     <TableHead>Cost</TableHead>
                     <TableHead>Odometer</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRecords?.map((record) => (
-                    <TableRow key={record.id}>
+                    <TableRow 
+                      key={record.id} 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setSelectedRecord(record)}
+                    >
                       <TableCell className="font-medium">{record.bus?.registration_number || '-'}</TableCell>
                       <TableCell>{record.type}</TableCell>
                       <TableCell>{format(new Date(record.scheduled_date), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{record.cost ? formatCurrency(record.cost) : '₦0.00'}</TableCell>
                       <TableCell>{record.odometer_reading?.toLocaleString() || '-'}</TableCell>
                       <TableCell>{getStatusBadge(record.status)}</TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRecord(record);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
