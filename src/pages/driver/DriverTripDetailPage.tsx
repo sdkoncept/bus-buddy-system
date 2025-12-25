@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStartTrip, useEndTrip, useTripPassengers } from '@/hooks/useDriverTrips';
 import { useGPSTracking } from '@/hooks/useGPSTracking';
+import { useCapacitorGPS } from '@/hooks/useCapacitorGPS';
 import { sampleTrips, samplePassengers } from '@/data/sampleDriverData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,12 +88,21 @@ export default function DriverTripDetailPage() {
   const startTrip = useStartTrip();
   const endTrip = useEndTrip();
 
-  // GPS Tracking
-  const { position, isTracking, error: gpsError, startTracking, stopTracking } = useGPSTracking({
+  // GPS Tracking (native uses Capacitor; web uses browser geolocation)
+  const webGps = useGPSTracking({
     tripId: id,
     busId: trip?.bus_id,
     enabled: trip?.status === 'in_progress',
   });
+
+  const nativeGps = useCapacitorGPS({
+    tripId: id,
+    busId: trip?.bus_id,
+    enabled: trip?.status === 'in_progress',
+  });
+
+  const gps = nativeGps.isNative ? nativeGps : webGps;
+  const { position, isTracking, error: gpsError, startTracking, stopTracking } = gps;
 
   const handleStartTrip = async () => {
     if (!id) return;

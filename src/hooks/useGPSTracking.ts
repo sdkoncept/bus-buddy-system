@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { bearingDegrees, speedKmhFromSamples } from '@/lib/geo';
 
 interface GPSPosition {
   latitude: number;
   longitude: number;
-  speed: number | null;
-  heading: number | null;
+  speed: number | null; // m/s from navigator.geolocation
+  heading: number | null; // degrees
   accuracy: number;
   timestamp: number;
 }
@@ -30,51 +31,86 @@ export function useGPSTracking({
   const watchIdRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentRef = useRef<number>(0);
+  const lastFixRef = useRef<GPSPosition | null>(null);
 
-  const sendLocation = useCallback(async (pos: GPSPosition) => {
-    console.log('[useGPSTracking] sendLocation called', { busId, tripId, pos });
-    
-    if (!busId) {
-      console.log('[useGPSTracking] No bus ID provided, skipping location update');
-      return;
-    }
+  const sendLocation = useCallback(
+    async (pos: GPSPosition) => {
+      console.log('[useGPSTracking] sendLocation called', { busId, tripId, pos });
 
-    // Throttle updates
-    const now = Date.now();
-    const timeSinceLastSent = now - lastSentRef.current;
-    if (timeSinceLastSent < updateIntervalMs) {
-      console.log(`[useGPSTracking] Throttling: ${timeSinceLastSent}ms since last send`);
-      return;
-    }
-    lastSentRef.current = now;
-    console.log('[useGPSTracking] Sending location to backend...');
-
-    try {
-      const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
-         body: {
-           busId,
-           tripId,
-           latitude: pos.latitude,
-           longitude: pos.longitude,
-           // navigator.geolocation speed is in m/s; store as km/h
-           speed: pos.speed == null ? null : Math.max(0, pos.speed * 3.6),
-           heading: pos.heading,
-         },
-      });
-
-      if (sendError) {
-        console.error('Error sending location:', sendError);
-      } else {
-        console.log('Location sent successfully:', pos);
+      if (!busId) {
+        console.log('[useGPSTracking] No bus ID provided, skipping location update');
+        return;
       }
-    } catch (err) {
-      console.error('Failed to send location:', err);
-    }
-  }, [busId, tripId, updateIntervalMs]);
+
+      // Throttle updates
+      const now = Date.now();
+      const timeSinceLastSent = now - lastSentRef.current;
+      if (timeSinceLastSent < updateIntervalMs) {
+        console.log(`[useGPSTracking] Throttling: ${timeSinceLastSent}ms since last send`);
+        return;
+      }
+      lastSentRef.current = now;
+      console.log('[useGPSTracking] Sending location to backend...');
+
+      const prev = lastFixRef.current;
+
+      const computedSpeedKmh =
+        pos.speed == null && prev
+          ? speedKmhFromSamples(
+              {
+                latitude: prev.latitude,
+                longitude: prev.longitude,
+                timestamp: prev.timestamp,
+              },
+              { latitude: pos.latitude, longitude: pos.longitude, timestamp: pos.timestamp }
+            )
+          : null;
+
+      const speedKmh =
+        pos.speed == null
+          ? computedSpeedKmh
+          : Math.max(0, pos.speed * 3.6);
+
+      const heading =
+        pos.heading == null && prev
+          ? bearingDegrees(
+              {
+                latitude: prev.latitude,
+                longitude: prev.longitude,
+                timestamp: prev.timestamp,
+              },
+              { latitude: pos.latitude, longitude: pos.longitude, timestamp: pos.timestamp }
+            )
+          : pos.heading;
+
+      try {
+        const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
+          body: {
+            busId,
+            tripId,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            // Store as km/h
+            speed: speedKmh == null ? null : Number(speedKmh.toFixed(2)),
+            heading: heading == null ? null : Math.round(heading),
+          },
+        });
+
+        if (sendError) {
+          console.error('Error sending location:', sendError);
+        } else {
+          console.log('Location sent successfully:', { ...pos, speedKmh, heading });
+        }
+      } catch (err) {
+        console.error('Failed to send location:', err);
+      }
+    },
+    [busId, tripId, updateIntervalMs]
+  );
 
   const startTracking = useCallback(() => {
     console.log('[useGPSTracking] startTracking called', { busId, tripId, enabled });
-    
+
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       toast.error('Geolocation not supported');
@@ -94,7 +130,7 @@ export function useGPSTracking({
     // Watch position with high accuracy
     watchIdRef.current = navigator.geolocation.watchPosition(
       (geoPosition) => {
-        const newPosition: GPSPosition = {
+        const next: GPSPosition = {
           latitude: geoPosition.coords.latitude,
           longitude: geoPosition.coords.longitude,
           speed: geoPosition.coords.speed,
@@ -103,13 +139,14 @@ export function useGPSTracking({
           timestamp: geoPosition.timestamp,
         };
 
-        setPosition(newPosition);
-        sendLocation(newPosition);
+        setPosition(next);
+        sendLocation(next);
+        lastFixRef.current = next;
       },
       (geoError) => {
         console.error('Geolocation error:', geoError);
         setError(geoError.message);
-        
+
         switch (geoError.code) {
           case geoError.PERMISSION_DENIED:
             toast.error('Location permission denied. Please enable location access.');
@@ -192,7 +229,7 @@ export function useRealtimeBusLocations() {
 
       if (!error && data) {
         const locationMap = new Map();
-        data.forEach(loc => {
+        data.forEach((loc) => {
           // Keep only the most recent location per bus
           if (!locationMap.has(loc.bus_id)) {
             locationMap.set(loc.bus_id, loc);
@@ -218,9 +255,9 @@ export function useRealtimeBusLocations() {
         (payload) => {
           console.log('Realtime bus location update:', payload);
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            setLocations(prev => {
+            setLocations((prev) => {
               const newMap = new Map(prev);
-              newMap.set(payload.new.bus_id, payload.new);
+              newMap.set((payload as any).new.bus_id, (payload as any).new);
               return newMap;
             });
           }
@@ -238,3 +275,4 @@ export function useRealtimeBusLocations() {
 
   return { locations: Array.from(locations.values()), isConnected };
 }
+
