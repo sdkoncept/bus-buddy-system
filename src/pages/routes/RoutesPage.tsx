@@ -225,7 +225,7 @@ export default function RoutesPage() {
                               id="origin"
                               value={routeForm.origin}
                               onChange={(e) => setRouteForm({ ...routeForm, origin: e.target.value })}
-                              placeholder="New York"
+                              placeholder="Lagos"
                               required
                             />
                           </div>
@@ -235,7 +235,7 @@ export default function RoutesPage() {
                               id="destination"
                               value={routeForm.destination}
                               onChange={(e) => setRouteForm({ ...routeForm, destination: e.target.value })}
-                              placeholder="Newark"
+                              placeholder="Abuja"
                               required
                             />
                           </div>
@@ -391,7 +391,7 @@ export default function RoutesPage() {
                           id="city"
                           value={stationForm.city}
                           onChange={(e) => setStationForm({ ...stationForm, city: e.target.value })}
-                          placeholder="New York"
+                          placeholder="Ikeja"
                         />
                       </div>
                       <div className="flex items-center space-x-2">
