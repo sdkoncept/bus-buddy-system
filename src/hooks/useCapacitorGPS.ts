@@ -3,12 +3,13 @@ import { Geolocation, Position, PermissionStatus } from '@capacitor/geolocation'
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { bearingDegrees, speedKmhFromSamples } from '@/lib/geo';
 
 interface GPSPosition {
   latitude: number;
   longitude: number;
-  speed: number | null;
-  heading: number | null;
+  speed: number | null; // m/s from device API
+  heading: number | null; // degrees from device API
   accuracy: number;
   timestamp: number;
 }
@@ -32,6 +33,7 @@ export function useCapacitorGPS({
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus | null>(null);
   const watchIdRef = useRef<string | null>(null);
   const lastSentRef = useRef<number>(0);
+  const lastFixRef = useRef<GPSPosition | null>(null);
   const isNative = Capacitor.isNativePlatform();
 
   // Check if running on native platform
@@ -68,61 +70,110 @@ export function useCapacitorGPS({
   }, []);
 
   // Send location to backend
-  const sendLocation = useCallback(async (pos: GPSPosition) => {
-    if (!busId) {
-      console.log('[CapacitorGPS] No bus ID, skipping update');
-      return;
-    }
+  const sendLocation = useCallback(
+    async (pos: GPSPosition) => {
+      if (!busId) {
+        console.log('[CapacitorGPS] No bus ID, skipping update');
+        return;
+      }
 
-    const now = Date.now();
-    if (now - lastSentRef.current < updateIntervalMs) {
-      return;
-    }
-    lastSentRef.current = now;
+      const now = Date.now();
+      if (now - lastSentRef.current < updateIntervalMs) {
+        return;
+      }
+      lastSentRef.current = now;
 
-    try {
-      console.log('[CapacitorGPS] Sending location:', pos);
-      const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
-        body: {
+      // Normalize speed to km/h (device speed is usually m/s). If missing, compute from last fix.
+      const prev = lastFixRef.current;
+      const computedSpeedKmh =
+        pos.speed == null && prev
+          ? speedKmhFromSamples(
+              {
+                latitude: prev.latitude,
+                longitude: prev.longitude,
+                timestamp: prev.timestamp,
+              },
+              { latitude: pos.latitude, longitude: pos.longitude, timestamp: pos.timestamp }
+            )
+          : null;
+
+      const speedKmh =
+        pos.speed == null
+          ? computedSpeedKmh
+          : Math.max(0, pos.speed * 3.6);
+
+      // Normalize heading (if missing, compute bearing from last fix)
+      const heading =
+        pos.heading == null && prev
+          ? bearingDegrees(
+              {
+                latitude: prev.latitude,
+                longitude: prev.longitude,
+                timestamp: prev.timestamp,
+              },
+              { latitude: pos.latitude, longitude: pos.longitude, timestamp: pos.timestamp }
+            )
+          : pos.heading;
+
+      try {
+        console.log('[CapacitorGPS] Sending location:', {
           busId,
           tripId,
           latitude: pos.latitude,
           longitude: pos.longitude,
-          speed: pos.speed == null ? null : Math.max(0, pos.speed * 3.6),
-          heading: pos.heading,
-        },
-      });
+          speedKmh,
+          heading,
+          accuracy: pos.accuracy,
+          timestamp: pos.timestamp,
+        });
 
-      if (sendError) {
-        console.error('[CapacitorGPS] Error sending location:', sendError);
-      } else {
-        console.log('[CapacitorGPS] Location sent successfully');
+        const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
+          body: {
+            busId,
+            tripId,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            speed: speedKmh == null ? null : Number(speedKmh.toFixed(2)),
+            heading: heading == null ? null : Math.round(heading),
+          },
+        });
+
+        if (sendError) {
+          console.error('[CapacitorGPS] Error sending location:', sendError);
+        } else {
+          console.log('[CapacitorGPS] Location sent successfully');
+        }
+      } catch (err) {
+        console.error('[CapacitorGPS] Failed to send location:', err);
       }
-    } catch (err) {
-      console.error('[CapacitorGPS] Failed to send location:', err);
-    }
-  }, [busId, tripId, updateIntervalMs]);
+    },
+    [busId, tripId, updateIntervalMs]
+  );
 
   // Handle position update
-  const handlePositionUpdate = useCallback((position: Position) => {
-    const newPosition: GPSPosition = {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      speed: position.coords.speed,
-      heading: position.coords.heading,
-      accuracy: position.coords.accuracy,
-      timestamp: position.timestamp,
-    };
+  const handlePositionUpdate = useCallback(
+    (position: Position) => {
+      const newPosition: GPSPosition = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        speed: position.coords.speed,
+        heading: position.coords.heading,
+        accuracy: position.coords.accuracy,
+        timestamp: position.timestamp,
+      };
 
-    console.log('[CapacitorGPS] Position update:', newPosition);
-    setPosition(newPosition);
-    sendLocation(newPosition);
-  }, [sendLocation]);
+      console.log('[CapacitorGPS] Position update:', newPosition);
+      setPosition(newPosition);
+      sendLocation(newPosition);
+      lastFixRef.current = newPosition;
+    },
+    [sendLocation]
+  );
 
   // Start tracking
   const startTracking = useCallback(async () => {
     console.log('[CapacitorGPS] startTracking called', { busId, tripId, isTracking });
-    
+
     if (!busId) {
       console.log('[CapacitorGPS] No bus ID, cannot start tracking');
       setError('No bus assigned');
@@ -166,13 +217,12 @@ export function useCapacitorGPS({
       setIsTracking(true);
       toast.success('GPS tracking started');
       console.log('[CapacitorGPS] Tracking started, watchId:', watchId);
-
     } catch (err: any) {
       console.error('[CapacitorGPS] Start tracking error:', err);
       setError(err?.message || 'Failed to start GPS tracking');
       toast.error('Failed to start GPS tracking');
     }
-  }, [busId, checkPermissions, requestPermissions, handlePositionUpdate]);
+  }, [busId, tripId, isTracking, checkPermissions, requestPermissions, handlePositionUpdate]);
 
   // Stop tracking
   const stopTracking = useCallback(async () => {
@@ -209,7 +259,7 @@ export function useCapacitorGPS({
   // Auto-start/stop based on enabled prop
   useEffect(() => {
     console.log('[CapacitorGPS] Auto-start/stop effect', { enabled, busId, isTracking });
-    
+
     if (enabled && busId && !isTracking) {
       console.log('[CapacitorGPS] Auto-starting tracking');
       startTracking();
@@ -244,3 +294,4 @@ export function useCapacitorGPS({
     requestPermissions,
   };
 }
+
