@@ -1,0 +1,238 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Geolocation, Position, PermissionStatus } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface GPSPosition {
+  latitude: number;
+  longitude: number;
+  speed: number | null;
+  heading: number | null;
+  accuracy: number;
+  timestamp: number;
+}
+
+interface UseCapacitorGPSOptions {
+  tripId?: string;
+  busId?: string;
+  updateIntervalMs?: number;
+  enabled?: boolean;
+}
+
+export function useCapacitorGPS({
+  tripId,
+  busId,
+  updateIntervalMs = 15000,
+  enabled = false,
+}: UseCapacitorGPSOptions) {
+  const [position, setPosition] = useState<GPSPosition | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus | null>(null);
+  const watchIdRef = useRef<string | null>(null);
+  const lastSentRef = useRef<number>(0);
+  const isNative = Capacitor.isNativePlatform();
+
+  // Check if running on native platform
+  const checkPlatform = useCallback(() => {
+    console.log('[CapacitorGPS] Platform:', Capacitor.getPlatform());
+    console.log('[CapacitorGPS] Is native:', isNative);
+    return isNative;
+  }, [isNative]);
+
+  // Check and request permissions
+  const checkPermissions = useCallback(async () => {
+    try {
+      const status = await Geolocation.checkPermissions();
+      console.log('[CapacitorGPS] Permission status:', status);
+      setPermissionStatus(status);
+      return status;
+    } catch (err) {
+      console.error('[CapacitorGPS] Error checking permissions:', err);
+      return null;
+    }
+  }, []);
+
+  const requestPermissions = useCallback(async () => {
+    try {
+      const status = await Geolocation.requestPermissions();
+      console.log('[CapacitorGPS] Permission requested:', status);
+      setPermissionStatus(status);
+      return status;
+    } catch (err) {
+      console.error('[CapacitorGPS] Error requesting permissions:', err);
+      setError('Failed to request location permissions');
+      return null;
+    }
+  }, []);
+
+  // Send location to backend
+  const sendLocation = useCallback(async (pos: GPSPosition) => {
+    if (!busId) {
+      console.log('[CapacitorGPS] No bus ID, skipping update');
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastSentRef.current < updateIntervalMs) {
+      return;
+    }
+    lastSentRef.current = now;
+
+    try {
+      console.log('[CapacitorGPS] Sending location:', pos);
+      const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
+        body: {
+          busId,
+          tripId,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          speed: pos.speed == null ? null : Math.max(0, pos.speed * 3.6),
+          heading: pos.heading,
+        },
+      });
+
+      if (sendError) {
+        console.error('[CapacitorGPS] Error sending location:', sendError);
+      } else {
+        console.log('[CapacitorGPS] Location sent successfully');
+      }
+    } catch (err) {
+      console.error('[CapacitorGPS] Failed to send location:', err);
+    }
+  }, [busId, tripId, updateIntervalMs]);
+
+  // Handle position update
+  const handlePositionUpdate = useCallback((position: Position) => {
+    const newPosition: GPSPosition = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      speed: position.coords.speed,
+      heading: position.coords.heading,
+      accuracy: position.coords.accuracy,
+      timestamp: position.timestamp,
+    };
+
+    console.log('[CapacitorGPS] Position update:', newPosition);
+    setPosition(newPosition);
+    sendLocation(newPosition);
+  }, [sendLocation]);
+
+  // Start tracking
+  const startTracking = useCallback(async () => {
+    if (!busId) {
+      setError('No bus assigned');
+      return;
+    }
+
+    setError(null);
+
+    try {
+      // Check/request permissions first
+      let status = await checkPermissions();
+      if (status?.location !== 'granted') {
+        status = await requestPermissions();
+        if (status?.location !== 'granted') {
+          setError('Location permission denied');
+          toast.error('Location permission denied. Please enable in settings.');
+          return;
+        }
+      }
+
+      // Start watching position
+      const watchId = await Geolocation.watchPosition(
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 5000,
+        },
+        (position, err) => {
+          if (err) {
+            console.error('[CapacitorGPS] Watch error:', err);
+            setError(err.message);
+            return;
+          }
+          if (position) {
+            handlePositionUpdate(position);
+          }
+        }
+      );
+
+      watchIdRef.current = watchId;
+      setIsTracking(true);
+      toast.success('GPS tracking started');
+      console.log('[CapacitorGPS] Tracking started, watchId:', watchId);
+
+    } catch (err: any) {
+      console.error('[CapacitorGPS] Start tracking error:', err);
+      setError(err?.message || 'Failed to start GPS tracking');
+      toast.error('Failed to start GPS tracking');
+    }
+  }, [busId, checkPermissions, requestPermissions, handlePositionUpdate]);
+
+  // Stop tracking
+  const stopTracking = useCallback(async () => {
+    if (watchIdRef.current) {
+      try {
+        await Geolocation.clearWatch({ id: watchIdRef.current });
+        console.log('[CapacitorGPS] Watch cleared');
+      } catch (err) {
+        console.error('[CapacitorGPS] Error clearing watch:', err);
+      }
+      watchIdRef.current = null;
+    }
+
+    setIsTracking(false);
+    toast.info('GPS tracking stopped');
+  }, []);
+
+  // Get current position once
+  const getCurrentPosition = useCallback(async () => {
+    try {
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+      });
+      handlePositionUpdate(position);
+      return position;
+    } catch (err: any) {
+      console.error('[CapacitorGPS] Get position error:', err);
+      setError(err?.message || 'Failed to get current position');
+      return null;
+    }
+  }, [handlePositionUpdate]);
+
+  // Auto-start/stop based on enabled prop
+  useEffect(() => {
+    if (enabled && busId && !isTracking) {
+      startTracking();
+    } else if (!enabled && isTracking) {
+      stopTracking();
+    }
+
+    return () => {
+      if (watchIdRef.current) {
+        Geolocation.clearWatch({ id: watchIdRef.current }).catch(console.error);
+      }
+    };
+  }, [enabled, busId, isTracking, startTracking, stopTracking]);
+
+  // Check permissions on mount
+  useEffect(() => {
+    checkPlatform();
+    checkPermissions();
+  }, [checkPlatform, checkPermissions]);
+
+  return {
+    position,
+    isTracking,
+    error,
+    permissionStatus,
+    isNative,
+    startTracking,
+    stopTracking,
+    getCurrentPosition,
+    requestPermissions,
+  };
+}
