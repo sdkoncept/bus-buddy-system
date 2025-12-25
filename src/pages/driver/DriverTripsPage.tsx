@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
-import { useDriverTrips, DriverTrip } from '@/hooks/useDriverTrips';
+import { useDriverTrips, useUpcomingDriverTrips, DriverTrip } from '@/hooks/useDriverTrips';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Bus, 
   MapPin, 
@@ -18,18 +19,18 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { sampleTrips } from '@/data/sampleDriverData';
 
 export default function DriverTripsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [viewMode, setViewMode] = useState<'upcoming' | 'date'>('upcoming');
   const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
-  const { data: trips, isLoading } = useDriverTrips(dateString);
+  
+  const { data: upcomingTrips, isLoading: upcomingLoading } = useUpcomingDriverTrips();
+  const { data: dateTrips, isLoading: dateLoading } = useDriverTrips(dateString);
   const navigate = useNavigate();
 
-  // Use sample data if no real trips exist
-  const displayTrips = trips && trips.length > 0 
-    ? trips 
-    : sampleTrips.filter(t => t.trip_date === dateString) as unknown as DriverTrip[];
+  const displayTrips = viewMode === 'upcoming' ? upcomingTrips : dateTrips;
+  const isLoading = viewMode === 'upcoming' ? upcomingLoading : dateLoading;
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -107,26 +108,50 @@ export default function DriverTripsPage() {
           <h1 className="text-2xl font-bold">My Trips</h1>
           <p className="text-muted-foreground">View and manage your assigned trips</p>
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              {getDateLabel(selectedDate)}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              initialFocus
-              className={cn("p-3 pointer-events-auto")}
-            />
-          </PopoverContent>
-        </Popover>
       </div>
 
-      {isLoading ? (
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'upcoming' | 'date')}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            <TabsTrigger value="date">By Date</TabsTrigger>
+          </TabsList>
+          
+          {viewMode === 'date' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  {getDateLabel(selectedDate)}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+
+        <TabsContent value="upcoming" className="mt-4">
+          {renderTripsContent()}
+        </TabsContent>
+        
+        <TabsContent value="date" className="mt-4">
+          {renderTripsContent()}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  function renderTripsContent() {
+    if (isLoading) {
+      return (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
@@ -136,23 +161,32 @@ export default function DriverTripsPage() {
             </Card>
           ))}
         </div>
-      ) : displayTrips && displayTrips.length > 0 ? (
+      );
+    }
+    
+    if (displayTrips && displayTrips.length > 0) {
+      return (
         <div className="space-y-4">
           {displayTrips.map((trip) => (
             <TripCard key={trip.id} trip={trip} />
           ))}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Bus className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No trips scheduled</h3>
-            <p className="text-muted-foreground text-center">
-              You don't have any trips assigned for {getDateLabel(selectedDate).toLowerCase()}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+      );
+    }
+    
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Bus className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-1">No trips found</h3>
+          <p className="text-muted-foreground text-center">
+            {viewMode === 'upcoming' 
+              ? "You don't have any upcoming trips assigned"
+              : `You don't have any trips assigned for ${getDateLabel(selectedDate).toLowerCase()}`
+            }
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 }

@@ -78,6 +78,53 @@ export function useDriverTrips(date?: string) {
   });
 }
 
+export function useUpcomingDriverTrips() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['driver-upcoming-trips', user?.id],
+    queryFn: async () => {
+      // First get the driver record for this user
+      const { data: driverData, error: driverError } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (driverError) throw driverError;
+      if (!driverData) return [];
+
+      const today = new Date().toISOString().split('T')[0];
+
+      // Get all upcoming trips (today and future)
+      const { data, error } = await supabase
+        .from('trips')
+        .select(`
+          id,
+          trip_date,
+          departure_time,
+          arrival_time,
+          actual_departure_time,
+          actual_arrival_time,
+          status,
+          notes,
+          available_seats,
+          route:routes(id, name, origin, destination, distance_km),
+          bus:buses(id, registration_number, model, capacity)
+        `)
+        .eq('driver_id', driverData.id)
+        .gte('trip_date', today)
+        .neq('status', 'completed')
+        .neq('status', 'cancelled')
+        .order('trip_date', { ascending: true })
+        .order('departure_time', { ascending: true });
+
+      if (error) throw error;
+      return data as DriverTrip[];
+    },
+    enabled: !!user?.id,
+  });
+}
 export function useStartTrip() {
   const queryClient = useQueryClient();
 
