@@ -46,14 +46,15 @@ export function useGPSTracking({
 
     try {
       const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
-        body: {
-          busId,
-          tripId,
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          speed: pos.speed,
-          heading: pos.heading,
-        },
+         body: {
+           busId,
+           tripId,
+           latitude: pos.latitude,
+           longitude: pos.longitude,
+           // navigator.geolocation speed is in m/s; store as km/h
+           speed: pos.speed == null ? null : Math.max(0, pos.speed * 3.6),
+           heading: pos.heading,
+         },
       });
 
       if (sendError) {
