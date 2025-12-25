@@ -34,6 +34,9 @@ import {
   Building2,
   FileText,
   UserCog,
+  Navigation,
+  AlertTriangle,
+  ClipboardList,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -63,8 +66,9 @@ const menuItems = {
   ],
   driver: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'My Schedule', url: '/schedules', icon: Calendar },
-    { title: 'My Trips', url: '/trips', icon: Route },
+    { title: 'My Trips', url: '/driver/trips', icon: Navigation },
+    { title: 'Passengers', url: '/driver/passengers', icon: Users },
+    { title: 'Incidents', url: '/driver/incidents', icon: AlertTriangle },
     { title: 'Settings', url: '/settings', icon: Settings },
   ],
   passenger: [
