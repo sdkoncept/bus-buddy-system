@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import GPSDiagnosticsPanel from '@/components/driver/GPSDiagnosticsPanel';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -20,6 +20,8 @@ import {
   Users,
   Signal,
   SignalZero,
+  SignalHigh,
+  SignalLow,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -58,6 +60,8 @@ export default function DriverAppPage() {
     error: gpsError,
     permissionStatus,
     isNative,
+    stage,
+    diagnostics,
     startTracking,
     stopTracking,
     getCurrentPosition,
@@ -164,6 +168,27 @@ export default function DriverAppPage() {
     }
   };
 
+  const getGPSStatusIcon = () => {
+    if (!isTracking) return <SignalZero className="h-3 w-3" />;
+    if (stage === 'tracking' && diagnostics.fixCount > 0) return <SignalHigh className="h-3 w-3" />;
+    if (stage === 'acquiring' || stage === 'warming_up') return <SignalLow className="h-3 w-3 animate-pulse" />;
+    return <Signal className="h-3 w-3" />;
+  };
+
+  const getGPSStatusText = () => {
+    if (!isTracking) return 'GPS Off';
+    if (stage === 'tracking' && diagnostics.fixCount > 0) return 'GPS Active';
+    if (stage === 'acquiring') return 'Acquiring...';
+    if (stage === 'warming_up') return 'Warming Up...';
+    return 'GPS On';
+  };
+
+  const getGPSStatusVariant = () => {
+    if (!isTracking) return 'outline';
+    if (stage === 'tracking' && diagnostics.fixCount > 0) return 'secondary';
+    return 'outline';
+  };
+
   if (isLoadingDriver) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -200,18 +225,9 @@ export default function DriverAppPage() {
             <Bus className="h-6 w-6" />
             <span className="font-semibold text-lg">EagleLine Driver</span>
           </div>
-          <Badge variant={isTracking ? "secondary" : "outline"} className="gap-1">
-            {isTracking ? (
-              <>
-                <Signal className="h-3 w-3" />
-                GPS Active
-              </>
-            ) : (
-              <>
-                <SignalZero className="h-3 w-3" />
-                GPS Off
-              </>
-            )}
+          <Badge variant={getGPSStatusVariant() as any} className="gap-1">
+            {getGPSStatusIcon()}
+            {getGPSStatusText()}
           </Badge>
         </div>
       </div>
@@ -257,6 +273,15 @@ export default function DriverAppPage() {
               </div>
             )}
 
+            {/* GPS Stage Indicator */}
+            {isTracking && stage !== 'tracking' && (
+              <div className="bg-warning/10 text-warning-foreground text-sm p-2 rounded flex items-center gap-2">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                {stage === 'warming_up' && 'GPS warming up - please wait...'}
+                {stage === 'acquiring' && 'Acquiring GPS signal - move to an open area if possible...'}
+              </div>
+            )}
+
             {position ? (
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="bg-muted p-2 rounded">
@@ -280,7 +305,7 @@ export default function DriverAppPage() {
               </div>
             ) : (
               <p className="text-muted-foreground text-sm text-center py-4">
-                No position data yet
+                {isTracking ? 'Waiting for GPS fix...' : 'No position data yet'}
               </p>
             )}
 
@@ -324,6 +349,16 @@ export default function DriverAppPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* GPS Diagnostics Panel */}
+        <GPSDiagnosticsPanel
+          diagnostics={diagnostics}
+          position={position}
+          isTracking={isTracking}
+          isNative={isNative}
+          onRefreshPosition={getCurrentPosition}
+          onRequestPermissions={requestPermissions}
+        />
 
         {/* Today's Trips */}
         <Card>
@@ -423,6 +458,9 @@ export default function DriverAppPage() {
           <p>Platform: {isNative ? 'Native Android' : 'Web Browser'}</p>
           <p className="mt-1">GPS updates every 15 seconds • Auto-refresh every 10 min</p>
           <p className="mt-1">Last refresh: {format(lastRefresh, 'HH:mm:ss')}</p>
+          {diagnostics.fixCount > 0 && (
+            <p className="mt-1 text-success">GPS Fixes: {diagnostics.fixCount}</p>
+          )}
         </div>
       </div>
     </div>
