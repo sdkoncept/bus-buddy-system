@@ -62,6 +62,9 @@ export function useCreateBooking() {
       passenger_count: number;
       total_fare: number;
       status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+      booking_type?: 'one_way' | 'round_trip';
+      linked_booking_id?: string;
+      is_return_leg?: boolean;
       boarding_stop_id?: string;
       alighting_stop_id?: string;
       payment_method?: string;
@@ -71,7 +74,12 @@ export function useCreateBooking() {
       
       const { data, error } = await supabase
         .from('bookings')
-        .insert({ ...booking, booking_number })
+        .insert({ 
+          ...booking, 
+          booking_number,
+          booking_type: booking.booking_type || 'one_way',
+          is_return_leg: booking.is_return_leg || false,
+        })
         .select()
         .single();
       
@@ -82,6 +90,87 @@ export function useCreateBooking() {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
       toast.success('Booking created successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to create booking: ' + error.message);
+    },
+  });
+}
+
+export function useCreateRoundTripBooking() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      user_id: string;
+      outbound_trip_id: string;
+      return_trip_id?: string;
+      seat_numbers: number[];
+      passenger_count: number;
+      outbound_fare: number;
+      return_fare?: number;
+      booking_type: 'one_way' | 'round_trip';
+      payment_method?: string;
+    }) => {
+      const baseBookingNumber = `BK${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      
+      // Create outbound booking
+      const { data: outboundBooking, error: outboundError } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: params.user_id,
+          trip_id: params.outbound_trip_id,
+          seat_numbers: params.seat_numbers,
+          passenger_count: params.passenger_count,
+          total_fare: params.outbound_fare,
+          status: 'confirmed' as const,
+          booking_type: params.booking_type,
+          is_return_leg: false,
+          payment_method: params.payment_method,
+          booking_number: params.booking_type === 'round_trip' ? `${baseBookingNumber}-A` : baseBookingNumber,
+        })
+        .select()
+        .single();
+      
+      if (outboundError) throw outboundError;
+
+      // If round trip, create return booking and link them
+      if (params.booking_type === 'round_trip' && params.return_trip_id) {
+        const { data: returnBooking, error: returnError } = await supabase
+          .from('bookings')
+          .insert({
+            user_id: params.user_id,
+            trip_id: params.return_trip_id,
+            seat_numbers: params.seat_numbers,
+            passenger_count: params.passenger_count,
+            total_fare: params.return_fare || 0,
+            status: 'confirmed' as const,
+            booking_type: 'round_trip' as const,
+            is_return_leg: true,
+            linked_booking_id: outboundBooking.id,
+            payment_method: params.payment_method,
+            booking_number: `${baseBookingNumber}-B`,
+          })
+          .select()
+          .single();
+
+        if (returnError) throw returnError;
+
+        // Update outbound booking to link to return
+        await supabase
+          .from('bookings')
+          .update({ linked_booking_id: returnBooking.id })
+          .eq('id', outboundBooking.id);
+
+        return { outbound: outboundBooking, return: returnBooking };
+      }
+
+      return { outbound: outboundBooking };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
+      toast.success('Booking confirmed successfully!');
     },
     onError: (error) => {
       toast.error('Failed to create booking: ' + error.message);

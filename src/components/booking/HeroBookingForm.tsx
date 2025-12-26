@@ -33,6 +33,10 @@ const HeroBookingForm = () => {
     if (toLocation) params.set('to', toLocation);
     if (departureDate) params.set('date', format(departureDate, 'yyyy-MM-dd'));
     if (adults) params.set('passengers', adults.toString());
+    params.set('tripType', tripType);
+    if (tripType === 'round-trip' && returnDate) {
+      params.set('returnDate', format(returnDate, 'yyyy-MM-dd'));
+    }
     
     // Redirect to auth, after login user goes to /book with params
     navigate(`/auth?redirect=/book&${params.toString()}`);

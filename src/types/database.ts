@@ -1,6 +1,7 @@
 export type AppRole = 'admin' | 'driver' | 'passenger' | 'storekeeper' | 'mechanic' | 'staff' | 'accounts';
 export type BusStatus = 'active' | 'maintenance' | 'out_of_service';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export type BookingType = 'one_way' | 'round_trip';
 export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type WorkOrderStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
@@ -183,6 +184,9 @@ export interface Booking {
   passenger_count: number;
   total_fare: number;
   status: BookingStatus;
+  booking_type: BookingType;
+  linked_booking_id?: string;
+  is_return_leg: boolean;
   payment_status?: string;
   payment_method?: string;
   booked_at: string;
@@ -191,6 +195,7 @@ export interface Booking {
   created_at: string;
   updated_at: string;
   trip?: Trip;
+  linked_booking?: Booking;
 }
 
 export interface Payment {
