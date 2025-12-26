@@ -204,6 +204,13 @@ export type Database = {
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_buses_driver"
+            columns: ["current_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
+            referencedColumns: ["id"]
+          },
         ]
       }
       complaints: {
@@ -391,6 +398,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
             referencedColumns: ["id"]
           },
           {
@@ -621,6 +635,13 @@ export type Database = {
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_cards_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
+            referencedColumns: ["id"]
+          },
         ]
       }
       maintenance_records: {
@@ -682,6 +703,13 @@ export type Database = {
             columns: ["mechanic_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_records_mechanic_id_fkey"
+            columns: ["mechanic_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
             referencedColumns: ["id"]
           },
         ]
@@ -884,6 +912,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
             referencedColumns: ["id"]
           },
         ]
@@ -1114,6 +1149,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "schedules_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "schedules_route_id_fkey"
             columns: ["route_id"]
             isOneToOne: false
@@ -1162,6 +1204,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_audit_log: {
+        Row: {
+          accessed_at: string | null
+          action: string
+          id: string
+          ip_address: string | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          action: string
+          id?: string
+          ip_address?: string | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string | null
+          action?: string
+          id?: string
+          ip_address?: string | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       states: {
         Row: {
@@ -1481,6 +1556,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "trips_route_id_fkey"
             columns: ["route_id"]
             isOneToOne: false
@@ -1675,7 +1757,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      drivers_operational: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          hire_date: string | null
+          id: string | null
+          rating: number | null
+          status: string | null
+          total_trips: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
@@ -1689,6 +1783,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_payroll_authorized: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
