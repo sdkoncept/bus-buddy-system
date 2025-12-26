@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import GPSHealthIndicator from '@/components/tracking/GPSHealthIndicator';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BusLocation {
   id: string;
@@ -39,6 +41,9 @@ interface BusLocation {
 }
 
 export default function TrackingPage() {
+  const navigate = useNavigate();
+  const { role } = useAuth();
+
   const { data: buses } = useBuses();
   const { data: schedules } = useSchedules();
   const { data: routes } = useRoutes();
@@ -192,7 +197,7 @@ export default function TrackingPage() {
             Track buses in real-time on the map
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge 
             variant={isConnected ? "default" : "secondary"} 
             className={isConnected ? "bg-success" : ""}
@@ -203,6 +208,13 @@ export default function TrackingPage() {
               <><WifiOff className="h-3 w-3 mr-1" /> Connecting...</>
             )}
           </Badge>
+
+          {(role === 'admin' || role === 'driver') && (
+            <Button variant="outline" onClick={() => navigate('/driver-app')}>
+              Driver App
+            </Button>
+          )}
+
           <Button variant="outline" onClick={() => window.location.reload()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh

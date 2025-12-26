@@ -206,7 +206,10 @@ export function useCapacitorGPS({
           const errMsg = (sendError as any)?.message || 'Unknown error';
           const status = (sendError as any)?.status;
 
-          console.error('[CapacitorGPS] Error sending location:', { status, errMsg, sendError });
+          console.error(
+            '[CapacitorGPS] Error sending location:',
+            JSON.stringify({ status: status || null, message: errMsg })
+          );
 
           // Surface auth problems prominently (common cause of "GPS not working" even when fixes are acquired)
           if (status === 401 || /authorization|jwt|unauthorized|Missing authorization header/i.test(errMsg)) {
