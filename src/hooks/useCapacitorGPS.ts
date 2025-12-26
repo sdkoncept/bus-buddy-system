@@ -191,7 +191,7 @@ export function useCapacitorGPS({
           timestamp: pos.timestamp,
         });
 
-        const { error: sendError } = await supabase.functions.invoke('update-bus-location', {
+        const { data, error: sendError } = await supabase.functions.invoke('update-bus-location', {
           body: {
             busId,
             tripId,
@@ -204,17 +204,17 @@ export function useCapacitorGPS({
 
         if (sendError) {
           console.error('[CapacitorGPS] Error sending location:', sendError);
-          updateDiagnostics({ 
-            lastSendResult: 'error', 
+          updateDiagnostics({
+            lastSendResult: 'error',
             lastSendTime: now,
-            lastError: `Send failed: ${sendError.message || 'Unknown error'}`
+            lastError: `Send failed: ${sendError.message || 'Unknown error'}`,
           });
         } else {
-          console.log('[CapacitorGPS] Location sent successfully');
-          updateDiagnostics({ 
-            lastSendResult: 'success', 
+          console.log('[CapacitorGPS] Location sent successfully:', data);
+          updateDiagnostics({
+            lastSendResult: 'success',
             lastSendTime: now,
-            lastError: null
+            lastError: null,
           });
         }
       } catch (err: any) {

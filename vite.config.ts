@@ -15,7 +15,10 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
+      // NOTE: favicon.ico precaching can fail on some Android WebView builds (served as https://localhost)
+      // and throws an unhandled Workbox error that can interfere with app startup.
+      // We keep PWA icons but exclude favicon.ico from explicit precache.
+      includeAssets: ["pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
         name: "EagleLine Fleet Management",
         short_name: "EagleLine",

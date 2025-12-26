@@ -88,17 +88,19 @@ export default function DriverTripDetailPage() {
   const startTrip = useStartTrip();
   const endTrip = useEndTrip();
 
-  // GPS Tracking (native uses Capacitor; web uses browser geolocation)
-  const webGps = useGPSTracking({
+  // GPS Tracking
+  // IMPORTANT: On native (Capacitor) we must not start the browser geolocation watcher,
+  // otherwise we can end up with duplicate watchers and confusing state.
+  const nativeGps = useCapacitorGPS({
     tripId: id,
     busId: trip?.bus_id,
     enabled: trip?.status === 'in_progress',
   });
 
-  const nativeGps = useCapacitorGPS({
+  const webGps = useGPSTracking({
     tripId: id,
     busId: trip?.bus_id,
-    enabled: trip?.status === 'in_progress',
+    enabled: !nativeGps.isNative && trip?.status === 'in_progress',
   });
 
   const gps = nativeGps.isNative ? nativeGps : webGps;
