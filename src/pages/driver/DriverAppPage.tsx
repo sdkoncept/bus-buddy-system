@@ -125,6 +125,25 @@ export default function DriverAppPage() {
     return () => clearInterval(interval);
   }, [refetchTrips]);
 
+  // Ensure GPS tracking stays ON while a trip is in progress (even after app reload)
+  useEffect(() => {
+    const shouldTrack = !!activeTrip?.id && !!driverInfo?.busId;
+
+    if (shouldTrack) {
+      setGpsEnabled(true);
+      if (!isTracking) {
+        startTracking();
+      }
+      return;
+    }
+
+    // If no active trip, stop tracking
+    setGpsEnabled(false);
+    if (isTracking) {
+      stopTracking();
+    }
+  }, [activeTrip?.id, driverInfo?.busId, isTracking, startTracking, stopTracking]);
+
   const handleStartTrip = async (tripId: string) => {
     try {
       console.log('[DriverAppPage] Starting trip:', tripId);
