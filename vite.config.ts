@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       // NOTE: favicon.ico precaching can fail on some Android WebView builds (served as https://localhost)
       // and throws an unhandled Workbox error that can interfere with app startup.
       // We keep PWA icons but exclude favicon.ico from explicit precache.
-      includeAssets: ["pwa-192x192.png", "pwa-512x512.png"],
+      includeAssets: ["pwa-192x192.png"],
       manifest: {
         name: "EagleLine Fleet Management",
         short_name: "EagleLine",
@@ -33,16 +33,6 @@ export default defineConfig(({ mode }) => ({
           {
             src: "pwa-192x192.png",
             sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
           },
