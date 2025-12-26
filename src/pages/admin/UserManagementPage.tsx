@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useUsers, useUpdateProfile, useUpdateUserRole, useCreateUser, UserWithRole } from '@/hooks/useUsers';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -30,9 +42,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Plus, Pencil, Users, Shield, UserPlus } from 'lucide-react';
+import { Search, Plus, Pencil, Users, Shield, UserPlus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -53,12 +66,15 @@ export default function UserManagementPage() {
   const updateProfile = useUpdateProfile();
   const updateUserRole = useUpdateUserRole();
   const createUser = useCreateUser();
+  const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserWithRole | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -161,6 +177,41 @@ export default function UserManagementPage() {
       emergency_contact: '',
       emergency_phone: '',
     });
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('You must be logged in to delete users');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userToDelete.user_id },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to delete user');
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+      toast.success('User deleted successfully');
+      setUserToDelete(null);
+    } catch (error) {
+      console.error('Delete user error:', error);
+      toast.error((error as Error).message || 'Failed to delete user');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -330,13 +381,23 @@ export default function UserManagementPage() {
                         {format(new Date(user.created_at), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setUserToDelete(user)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -575,6 +636,29 @@ export default function UserManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {userToDelete?.full_name}? 
+              This will permanently remove their account and all associated data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete User'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
