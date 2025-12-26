@@ -118,9 +118,29 @@
     @apply border-border;
   }
 
+  /* Mobile touch responsiveness - remove 300ms tap delay */
+  html {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection in inputs and textareas */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Improve touch targets for interactive elements */
+  button, a, [role="button"], input, select, textarea, label {
+    touch-action: manipulation;
   }
 
   h1, h2, h3, h4, h5, h6 {
