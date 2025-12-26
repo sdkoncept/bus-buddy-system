@@ -20,10 +20,13 @@ export type Database = {
           boarding_stop_id: string | null
           booked_at: string
           booking_number: string
+          booking_type: Database["public"]["Enums"]["booking_type"]
           cancellation_reason: string | null
           cancelled_at: string | null
           created_at: string
           id: string
+          is_return_leg: boolean
+          linked_booking_id: string | null
           passenger_count: number
           payment_method: string | null
           payment_status: string | null
@@ -39,10 +42,13 @@ export type Database = {
           boarding_stop_id?: string | null
           booked_at?: string
           booking_number: string
+          booking_type?: Database["public"]["Enums"]["booking_type"]
           cancellation_reason?: string | null
           cancelled_at?: string | null
           created_at?: string
           id?: string
+          is_return_leg?: boolean
+          linked_booking_id?: string | null
           passenger_count?: number
           payment_method?: string | null
           payment_status?: string | null
@@ -58,10 +64,13 @@ export type Database = {
           boarding_stop_id?: string | null
           booked_at?: string
           booking_number?: string
+          booking_type?: Database["public"]["Enums"]["booking_type"]
           cancellation_reason?: string | null
           cancelled_at?: string | null
           created_at?: string
           id?: string
+          is_return_leg?: boolean
+          linked_booking_id?: string | null
           passenger_count?: number
           payment_method?: string | null
           payment_status?: string | null
@@ -85,6 +94,13 @@ export type Database = {
             columns: ["boarding_stop_id"]
             isOneToOne: false
             referencedRelation: "route_stops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_linked_booking_id_fkey"
+            columns: ["linked_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
           {
@@ -1795,6 +1811,7 @@ export type Database = {
         | "staff"
         | "accounts"
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"
+      booking_type: "one_way" | "round_trip"
       bus_status: "active" | "maintenance" | "out_of_service"
       complaint_status: "open" | "in_progress" | "resolved" | "closed"
       fault_repair_status: "pending" | "in_progress" | "completed" | "deferred"
@@ -1961,6 +1978,7 @@ export const Constants = {
         "accounts",
       ],
       booking_status: ["pending", "confirmed", "cancelled", "completed"],
+      booking_type: ["one_way", "round_trip"],
       bus_status: ["active", "maintenance", "out_of_service"],
       complaint_status: ["open", "in_progress", "resolved", "closed"],
       fault_repair_status: ["pending", "in_progress", "completed", "deferred"],
