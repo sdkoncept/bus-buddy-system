@@ -203,11 +203,20 @@ export function useCapacitorGPS({
         });
 
         if (sendError) {
-          console.error('[CapacitorGPS] Error sending location:', sendError);
+          const errMsg = (sendError as any)?.message || 'Unknown error';
+          const status = (sendError as any)?.status;
+
+          console.error('[CapacitorGPS] Error sending location:', { status, errMsg, sendError });
+
+          // Surface auth problems prominently (common cause of "GPS not working" even when fixes are acquired)
+          if (status === 401 || /authorization|jwt|unauthorized|Missing authorization header/i.test(errMsg)) {
+            setError(`Backend authorization error (${status || 401}). Please sign in again.`);
+          }
+
           updateDiagnostics({
             lastSendResult: 'error',
             lastSendTime: now,
-            lastError: `Send failed: ${sendError.message || 'Unknown error'}`,
+            lastError: `Send failed${status ? ` (${status})` : ''}: ${errMsg}`,
           });
         } else {
           console.log('[CapacitorGPS] Location sent successfully:', data);
