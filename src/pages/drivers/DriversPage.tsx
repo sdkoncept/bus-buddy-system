@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useDrivers, useCreateDriver, useUpdateDriver } from '@/hooks/useDrivers';
+import { useDrivers, useUpdateDriver } from '@/hooks/useDrivers';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,17 +10,26 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Users, Search, Edit, Star } from 'lucide-react';
+import { Plus, Users, Search, Edit, Star, Copy, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function DriversPage() {
   const { data: drivers, isLoading } = useDrivers();
-  const createDriver = useCreateDriver();
   const updateDriver = useUpdateDriver();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [editingDriver, setEditingDriver] = useState<any>(null);
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string; fullName: string } | null>(null);
+  
   const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    phone: '',
     license_number: '',
     license_expiry: '',
     status: 'active',
@@ -29,7 +40,8 @@ export default function DriversPage() {
 
   const filteredDrivers = drivers?.filter(driver =>
     driver.license_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    driver.address?.toLowerCase().includes(searchTerm.toLowerCase())
+    driver.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    driver.profile?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string | null) => {
@@ -43,21 +55,86 @@ export default function DriversPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingDriver) {
-        await updateDriver.mutateAsync({ id: editingDriver.id, ...formData });
-      } else {
-        await createDriver.mutateAsync(formData);
+    
+    if (editingDriver) {
+      // Update existing driver
+      try {
+        await updateDriver.mutateAsync({ 
+          id: editingDriver.id,
+          license_number: formData.license_number,
+          license_expiry: formData.license_expiry,
+          status: formData.status,
+          address: formData.address,
+          emergency_contact: formData.emergency_contact,
+          emergency_phone: formData.emergency_phone,
+        });
+        setIsDialogOpen(false);
+        resetForm();
+      } catch (error) {
+        // Error handled by mutation
       }
-      setIsDialogOpen(false);
-      resetForm();
-    } catch (error) {
-      // Error handled by mutation
+    } else {
+      // Create new driver with user account
+      setIsCreating(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast.error('You must be logged in to create drivers');
+          return;
+        }
+
+        const response = await supabase.functions.invoke('create-driver-user', {
+          body: {
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            phone: formData.phone || undefined,
+            license_number: formData.license_number,
+            license_expiry: formData.license_expiry,
+            address: formData.address || undefined,
+            emergency_contact: formData.emergency_contact || undefined,
+            emergency_phone: formData.emergency_phone || undefined,
+            status: formData.status,
+          },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message || 'Failed to create driver');
+        }
+
+        if (response.data?.error) {
+          throw new Error(response.data.error);
+        }
+
+        // Store credentials to show
+        setCreatedCredentials({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.full_name,
+        });
+        
+        // Invalidate queries to refresh the list
+        queryClient.invalidateQueries({ queryKey: ['drivers'] });
+        
+        toast.success('Driver created successfully');
+        setIsDialogOpen(false);
+        setShowCredentials(true);
+        resetForm();
+      } catch (error) {
+        console.error('Create driver error:', error);
+        toast.error((error as Error).message || 'Failed to create driver');
+      } finally {
+        setIsCreating(false);
+      }
     }
   };
 
   const resetForm = () => {
     setFormData({
+      email: '',
+      password: '',
+      full_name: '',
+      phone: '',
       license_number: '',
       license_expiry: '',
       status: 'active',
@@ -71,6 +148,10 @@ export default function DriversPage() {
   const openEditDialog = (driver: any) => {
     setEditingDriver(driver);
     setFormData({
+      email: '',
+      password: '',
+      full_name: driver.profile?.full_name || '',
+      phone: driver.profile?.phone || '',
       license_number: driver.license_number,
       license_expiry: driver.license_expiry,
       status: driver.status || 'active',
@@ -79,6 +160,11 @@ export default function DriversPage() {
       emergency_phone: driver.emergency_phone || '',
     });
     setIsDialogOpen(true);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
   };
 
   if (isLoading) {
@@ -99,90 +185,203 @@ export default function DriversPage() {
               Add Driver
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingDriver ? 'Edit Driver' : 'Add New Driver'}</DialogTitle>
               <DialogDescription>
-                {editingDriver ? 'Update driver details' : 'Add a new driver to your team'}
+                {editingDriver ? 'Update driver details' : 'Create a driver account with login credentials'}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="license">License Number</Label>
-                  <Input
-                    id="license"
-                    value={formData.license_number}
-                    onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                    placeholder="LAG-12345678"
-                    required
-                  />
+              {/* Account Details - Only show for new drivers */}
+              {!editingDriver && (
+                <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-sm">Login Credentials</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="driver@example.com"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="Min 6 characters"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <Input
+                        id="full_name"
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        placeholder="John Doe"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="0803 123 4567"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Driver Details */}
+              <div className="space-y-4">
+                {!editingDriver && <h3 className="font-semibold text-sm">Driver Details</h3>}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="license">License Number *</Label>
+                    <Input
+                      id="license"
+                      value={formData.license_number}
+                      onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                      placeholder="LAG-12345678"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="license_expiry">License Expiry *</Label>
+                    <Input
+                      id="license_expiry"
+                      type="date"
+                      value={formData.license_expiry}
+                      onChange={(e) => setFormData({ ...formData, license_expiry: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="license_expiry">License Expiry</Label>
+                  <Label htmlFor="address">Address</Label>
                   <Input
-                    id="license_expiry"
-                    type="date"
-                    value={formData.license_expiry}
-                    onChange={(e) => setFormData({ ...formData, license_expiry: e.target.value })}
-                    required
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="15 Awolowo Road, Ikeja, Lagos"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="15 Awolowo Road, Ikeja, Lagos"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency_contact">Emergency Contact</Label>
+                    <Input
+                      id="emergency_contact"
+                      value={formData.emergency_contact}
+                      onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                      placeholder="Full Name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency_phone">Emergency Phone</Label>
+                    <Input
+                      id="emergency_phone"
+                      value={formData.emergency_phone}
+                      onChange={(e) => setFormData({ ...formData, emergency_phone: e.target.value })}
+                      placeholder="0803 123 4567"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="emergency_contact">Emergency Contact</Label>
-                  <Input
-                    id="emergency_contact"
-                    value={formData.emergency_contact}
-                    onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
-                    placeholder="Full Name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emergency_phone">Emergency Phone</Label>
-                  <Input
-                    id="emergency_phone"
-                    value={formData.emergency_phone}
-                    onChange={(e) => setFormData({ ...formData, emergency_phone: e.target.value })}
-                    placeholder="0803 123 4567"
-                  />
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="on_leave">On Leave</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="on_leave">On Leave</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createDriver.isPending || updateDriver.isPending}>
-                  {editingDriver ? 'Update' : 'Add'} Driver
+                <Button type="submit" disabled={isCreating || updateDriver.isPending}>
+                  {isCreating ? 'Creating...' : editingDriver ? 'Update Driver' : 'Create Driver'}
                 </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Credentials Dialog */}
+      <Dialog open={showCredentials} onOpenChange={setShowCredentials}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Driver Created Successfully
+            </DialogTitle>
+            <DialogDescription>
+              Share these login credentials with {createdCredentials?.fullName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-background px-3 py-2 rounded border text-sm">
+                  {createdCredentials?.email}
+                </code>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => copyToClipboard(createdCredentials?.email || '', 'Email')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Password</Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-background px-3 py-2 rounded border text-sm">
+                  {createdCredentials?.password}
+                </code>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => copyToClipboard(createdCredentials?.password || '', 'Password')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            The driver can use these credentials to log in to the app.
+          </p>
+          <DialogFooter>
+            <Button onClick={() => { setShowCredentials(false); setCreatedCredentials(null); }}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -249,19 +448,25 @@ export default function DriversPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Name</TableHead>
                 <TableHead>License #</TableHead>
                 <TableHead>License Expiry</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Total Trips</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Emergency Contact</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDrivers?.map((driver) => (
                 <TableRow key={driver.id}>
-                  <TableCell className="font-medium">{driver.license_number}</TableCell>
+                  <TableCell className="font-medium">
+                    {driver.profile?.full_name || '-'}
+                    {driver.profile?.email && (
+                      <div className="text-xs text-muted-foreground">{driver.profile.email}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>{driver.license_number}</TableCell>
                   <TableCell>{format(new Date(driver.license_expiry), 'MMM d, yyyy')}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -271,7 +476,6 @@ export default function DriversPage() {
                   </TableCell>
                   <TableCell>{driver.total_trips || 0}</TableCell>
                   <TableCell>{getStatusBadge(driver.status)}</TableCell>
-                  <TableCell>{driver.emergency_contact || '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(driver)}>
                       <Edit className="h-4 w-4" />
