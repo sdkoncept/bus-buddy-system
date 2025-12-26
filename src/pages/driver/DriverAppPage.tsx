@@ -50,10 +50,25 @@ export default function DriverAppPage() {
   const activeTrip = trips?.find(t => t.status === 'in_progress');
   const currentTripId = activeTrip?.id || selectedTripId;
 
+  // Get the bus_id from either driver assignment OR active trip (fallback)
+  const activeBusId = driverInfo?.busId || activeTrip?.bus?.id || null;
+
   // Track if we want GPS enabled
   const [gpsEnabled, setGpsEnabled] = useState(false);
 
-  // Initialize GPS tracking
+  // Log GPS enablement conditions for debugging
+  useEffect(() => {
+    console.log('[DriverAppPage] GPS Enablement Check:', {
+      gpsEnabled,
+      driverBusId: driverInfo?.busId,
+      tripBusId: activeTrip?.bus?.id,
+      activeBusId,
+      currentTripId,
+      willEnable: gpsEnabled && !!activeBusId && !!currentTripId,
+    });
+  }, [gpsEnabled, driverInfo?.busId, activeTrip?.bus?.id, activeBusId, currentTripId]);
+
+  // Initialize GPS tracking - use activeBusId which includes trip fallback
   const {
     position,
     isTracking,
@@ -68,9 +83,9 @@ export default function DriverAppPage() {
     requestPermissions,
   } = useCapacitorGPS({
     tripId: currentTripId || undefined,
-    busId: driverInfo?.busId || undefined,
+    busId: activeBusId || undefined,
     updateIntervalMs: 15000,
-    enabled: gpsEnabled && !!driverInfo?.busId && !!currentTripId,
+    enabled: gpsEnabled && !!activeBusId && !!currentTripId,
   });
 
   // Fetch driver info and assigned bus
@@ -126,12 +141,21 @@ export default function DriverAppPage() {
   }, [refetchTrips]);
 
   // Ensure GPS tracking stays ON while a trip is in progress (even after app reload)
+  // Use activeBusId which falls back to trip's bus_id if driver isn't assigned
   useEffect(() => {
-    const shouldTrack = !!activeTrip?.id && !!driverInfo?.busId;
+    const shouldTrack = !!activeTrip?.id && !!activeBusId;
+    
+    console.log('[DriverAppPage] Auto-track check:', {
+      activeTripId: activeTrip?.id,
+      activeBusId,
+      shouldTrack,
+      isTracking,
+    });
 
     if (shouldTrack) {
       setGpsEnabled(true);
       if (!isTracking) {
+        console.log('[DriverAppPage] Auto-starting GPS tracking...');
         startTracking();
       }
       return;
@@ -140,9 +164,10 @@ export default function DriverAppPage() {
     // If no active trip, stop tracking
     setGpsEnabled(false);
     if (isTracking) {
+      console.log('[DriverAppPage] Auto-stopping GPS tracking...');
       stopTracking();
     }
-  }, [activeTrip?.id, driverInfo?.busId, isTracking, startTracking, stopTracking]);
+  }, [activeTrip?.id, activeBusId, isTracking, startTracking, stopTracking]);
 
   const handleStartTrip = async (tripId: string) => {
     try {
@@ -333,7 +358,7 @@ export default function DriverAppPage() {
                 onClick={handleToggleTracking}
                 variant={isTracking ? "destructive" : "default"}
                 className="flex-1"
-                disabled={!driverInfo.busId || !currentTripId}
+                disabled={!activeBusId || !currentTripId}
               >
                 {isTracking ? (
                   <>
@@ -350,18 +375,18 @@ export default function DriverAppPage() {
               <Button
                 variant="outline"
                 onClick={getCurrentPosition}
-                disabled={!driverInfo.busId}
+                disabled={!activeBusId}
               >
                 <MapPin className="h-4 w-4" />
               </Button>
             </div>
 
-            {!driverInfo.busId && (
+            {!activeBusId && (
               <p className="text-xs text-muted-foreground text-center">
                 No bus assigned - tracking disabled
               </p>
             )}
-            {driverInfo.busId && !currentTripId && (
+            {activeBusId && !currentTripId && (
               <p className="text-xs text-muted-foreground text-center">
                 Start a trip below to enable GPS tracking
               </p>
@@ -434,7 +459,7 @@ export default function DriverAppPage() {
                         size="sm"
                         className="w-full mt-2"
                         onClick={() => handleStartTrip(trip.id)}
-                        disabled={startTripMutation.isPending || !driverInfo.busId}
+                        disabled={startTripMutation.isPending || (!driverInfo.busId && !trips?.find(t => t.id === trip.id)?.bus?.id)}
                       >
                         {startTripMutation.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
