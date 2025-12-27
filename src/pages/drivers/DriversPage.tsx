@@ -24,6 +24,7 @@ export default function DriversPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingDriver, setEditingDriver] = useState<any>(null);
   const [showCredentials, setShowCredentials] = useState(false);
+  // Credentials stored only from local form state for one-time display, never from API response
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string; fullName: string } | null>(null);
   const [driverToDelete, setDriverToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -109,12 +110,14 @@ export default function DriversPage() {
           throw new Error(response.data.error);
         }
 
-        // Store credentials to show
-        setCreatedCredentials({
+        // Store credentials from form state for one-time display
+        // This is captured before form reset, not from API response (which doesn't return password)
+        const credentialsForDisplay = {
           email: formData.email,
           password: formData.password,
           fullName: formData.full_name,
-        });
+        };
+        setCreatedCredentials(credentialsForDisplay);
         
         // Invalidate queries to refresh the list
         queryClient.invalidateQueries({ queryKey: ['drivers'] });
@@ -409,11 +412,16 @@ export default function DriversPage() {
               </div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            The driver can use these credentials to log in to the app.
-          </p>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>⚠️ <strong>Important:</strong> Copy these credentials now. For security, they will not be shown again.</p>
+            <p>The driver can use these credentials to log in to the app.</p>
+          </div>
           <DialogFooter>
-            <Button onClick={() => { setShowCredentials(false); setCreatedCredentials(null); }}>
+            <Button onClick={() => { 
+              // Clear credentials from memory immediately after closing
+              setShowCredentials(false); 
+              setCreatedCredentials(null); 
+            }}>
               Done
             </Button>
           </DialogFooter>
