@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Eagerly loaded pages (critical path)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
@@ -65,6 +66,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Protected Dashboard Routes */}
             <Route element={<DashboardLayout />}>
