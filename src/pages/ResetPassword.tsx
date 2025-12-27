@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,14 +6,59 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Bus, Lock, Loader2, CheckCircle } from 'lucide-react';
+import { Bus, Lock, Loader2, CheckCircle, Check, X } from 'lucide-react';
 import { z } from 'zod';
+import { cn } from '@/lib/utils';
 
 const passwordSchema = z.string()
   .min(8, 'Password must be at least 8 characters')
   .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
   .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
   .regex(/[0-9]/, 'Password must contain at least one number');
+
+interface PasswordStrength {
+  score: number;
+  label: string;
+  color: string;
+  requirements: {
+    minLength: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasNumber: boolean;
+    hasSpecial: boolean;
+  };
+}
+
+const calculatePasswordStrength = (password: string): PasswordStrength => {
+  const requirements = {
+    minLength: password.length >= 8,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  };
+
+  const score = Object.values(requirements).filter(Boolean).length;
+
+  let label = 'Very Weak';
+  let color = 'bg-destructive';
+
+  if (score >= 5) {
+    label = 'Strong';
+    color = 'bg-green-500';
+  } else if (score >= 4) {
+    label = 'Good';
+    color = 'bg-emerald-500';
+  } else if (score >= 3) {
+    label = 'Fair';
+    color = 'bg-yellow-500';
+  } else if (score >= 2) {
+    label = 'Weak';
+    color = 'bg-orange-500';
+  }
+
+  return { score, label, color, requirements };
+};
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -24,6 +69,8 @@ export default function ResetPassword() {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const passwordStrength = useMemo(() => calculatePasswordStrength(password), [password]);
 
   useEffect(() => {
     // Check if we have a valid session from the reset link
@@ -84,6 +131,19 @@ export default function ResetPassword() {
     }
   };
 
+  const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
+    <div className="flex items-center gap-2 text-xs">
+      {met ? (
+        <Check className="h-3 w-3 text-green-500" />
+      ) : (
+        <X className="h-3 w-3 text-muted-foreground" />
+      )}
+      <span className={cn(met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
+        {text}
+      </span>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
       <div className="w-full max-w-md animate-fade-in">
@@ -134,9 +194,47 @@ export default function ResetPassword() {
                     />
                   </div>
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    Must be 8+ characters with uppercase, lowercase, and number
-                  </p>
+                  
+                  {/* Password Strength Indicator */}
+                  {password.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Password strength:</span>
+                        <span className={cn(
+                          "text-xs font-medium",
+                          passwordStrength.score >= 4 ? "text-green-600 dark:text-green-400" :
+                          passwordStrength.score >= 3 ? "text-yellow-600 dark:text-yellow-400" :
+                          "text-orange-600 dark:text-orange-400"
+                        )}>
+                          {passwordStrength.label}
+                        </span>
+                      </div>
+                      
+                      {/* Strength bar */}
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <div
+                            key={level}
+                            className={cn(
+                              "h-1.5 flex-1 rounded-full transition-colors",
+                              level <= passwordStrength.score
+                                ? passwordStrength.color
+                                : "bg-muted"
+                            )}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Requirements checklist */}
+                      <div className="grid grid-cols-2 gap-1 pt-1">
+                        <RequirementItem met={passwordStrength.requirements.minLength} text="8+ characters" />
+                        <RequirementItem met={passwordStrength.requirements.hasUppercase} text="Uppercase" />
+                        <RequirementItem met={passwordStrength.requirements.hasLowercase} text="Lowercase" />
+                        <RequirementItem met={passwordStrength.requirements.hasNumber} text="Number" />
+                        <RequirementItem met={passwordStrength.requirements.hasSpecial} text="Special char (bonus)" />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -152,6 +250,12 @@ export default function ResetPassword() {
                     />
                   </div>
                   {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+                  {confirmPassword.length > 0 && password === confirmPassword && (
+                    <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                      <Check className="h-3 w-3" />
+                      <span>Passwords match</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
