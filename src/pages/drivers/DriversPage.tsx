@@ -173,7 +173,7 @@ export default function DriversPage() {
           emergency_phone: formData.emergency_phone,
         });
         
-        // Update profile (full_name and phone) if driver has user_id
+        // If driver has user_id, update profile
         if (editingDriver.user_id) {
           await updateProfile.mutateAsync({
             userId: editingDriver.user_id,
@@ -182,12 +182,59 @@ export default function DriversPage() {
               phone: formData.phone || null,
             },
           });
+          setIsDialogOpen(false);
+          resetForm();
+        } else if (formData.email && formData.password) {
+          // Driver has no user_id - create account and link it
+          setIsCreating(true);
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            toast.error('You must be logged in to create accounts');
+            setIsCreating(false);
+            return;
+          }
+
+          const response = await supabase.functions.invoke('link-driver-account', {
+            body: {
+              driver_id: editingDriver.id,
+              email: formData.email,
+              password: formData.password,
+              full_name: formData.full_name,
+              phone: formData.phone || undefined,
+            },
+          });
+
+          if (response.error) {
+            throw new Error(response.error.message || 'Failed to create account');
+          }
+
+          if (response.data?.error) {
+            throw new Error(response.data.error);
+          }
+
+          // Store credentials for display
+          const credentialsForDisplay = {
+            email: formData.email,
+            password: formData.password,
+            fullName: formData.full_name,
+          };
+          setCreatedCredentials(credentialsForDisplay);
+          
+          queryClient.invalidateQueries({ queryKey: ['drivers'] });
+          toast.success('Account created and linked successfully');
+          setIsDialogOpen(false);
+          setShowCredentials(true);
+          resetForm();
+          setIsCreating(false);
+        } else {
+          // No user_id and no email/password provided - just close
+          setIsDialogOpen(false);
+          resetForm();
         }
-        
-        setIsDialogOpen(false);
-        resetForm();
       } catch (error) {
-        // Error handled by mutation
+        console.error('Update driver error:', error);
+        toast.error((error as Error).message || 'Failed to update driver');
+        setIsCreating(false);
       }
     } else {
       // Create new driver with user account
@@ -223,7 +270,6 @@ export default function DriversPage() {
         }
 
         // Store credentials from form state for one-time display
-        // This is captured before form reset, not from API response (which doesn't return password)
         const credentialsForDisplay = {
           email: formData.email,
           password: formData.password,
@@ -231,7 +277,6 @@ export default function DriversPage() {
         };
         setCreatedCredentials(credentialsForDisplay);
         
-        // Invalidate queries to refresh the list
         queryClient.invalidateQueries({ queryKey: ['drivers'] });
         
         toast.success('Driver created successfully');
@@ -426,7 +471,7 @@ export default function DriversPage() {
 
               {/* Driver Details */}
               <div className="space-y-4">
-                {editingDriver && (
+              {editingDriver && (
                   <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
                     <h3 className="font-semibold text-sm">Profile Details</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -450,6 +495,39 @@ export default function DriversPage() {
                         />
                       </div>
                     </div>
+                    
+                    {/* Show account creation fields if driver has no user_id */}
+                    {!editingDriver.user_id && (
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <h4 className="font-semibold text-sm text-primary mb-3">Create Login Account</h4>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          This driver doesn't have a login account. Create one so they can use the Driver App.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="link_email">Email *</Label>
+                            <Input
+                              id="link_email"
+                              type="email"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              placeholder="driver@example.com"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="link_password">Password *</Label>
+                            <Input
+                              id="link_password"
+                              type="password"
+                              value={formData.password}
+                              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                              placeholder="Min 6 characters"
+                              minLength={6}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {!editingDriver && <h3 className="font-semibold text-sm">Driver Details</h3>}
