@@ -115,7 +115,7 @@ const menuItems = {
 
 export function AppSidebar() {
   const { profile, role, signOut } = useAuth();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const location = useLocation();
   const collapsed = state === 'collapsed';
 
@@ -134,8 +134,15 @@ export function AppSidebar() {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
+  // Close sidebar on mobile when navigating
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
@@ -162,7 +169,7 @@ export function AppSidebar() {
                     isActive={location.pathname === item.url}
                     tooltip={collapsed ? item.title : undefined}
                   >
-                    <NavLink to={item.url}>
+                    <NavLink to={item.url} onClick={handleNavClick}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </NavLink>
@@ -204,7 +211,7 @@ export function AppSidebar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
-              <NavLink to="/settings" className="cursor-pointer">
+              <NavLink to="/settings" className="cursor-pointer" onClick={handleNavClick}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </NavLink>
