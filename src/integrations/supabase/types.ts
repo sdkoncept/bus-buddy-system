@@ -295,6 +295,63 @@ export type Database = {
           },
         ]
       }
+      driver_leaves: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          driver_id: string
+          end_date: string
+          id: string
+          leave_type: string
+          reason: string | null
+          start_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          driver_id: string
+          end_date: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          driver_id?: string
+          end_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_leaves_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_leaves_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_operational"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           address: string | null
@@ -1800,6 +1857,7 @@ export type Database = {
         Returns: boolean
       }
       is_payroll_authorized: { Args: { _user_id: string }; Returns: boolean }
+      notify_leave_expiring: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDrivers, useUpdateDriver } from '@/hooks/useDrivers';
+import { useUpdateProfile } from '@/hooks/useUsers';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ export default function DriversPage() {
   const navigate = useNavigate();
   const { data: drivers, isLoading } = useDrivers();
   const updateDriver = useUpdateDriver();
+  const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -160,6 +162,7 @@ export default function DriversPage() {
     if (editingDriver) {
       // Update existing driver
       try {
+        // Update driver record
         await updateDriver.mutateAsync({ 
           id: editingDriver.id,
           license_number: formData.license_number,
@@ -169,6 +172,18 @@ export default function DriversPage() {
           emergency_contact: formData.emergency_contact,
           emergency_phone: formData.emergency_phone,
         });
+        
+        // Update profile (full_name and phone) if driver has user_id
+        if (editingDriver.user_id) {
+          await updateProfile.mutateAsync({
+            userId: editingDriver.user_id,
+            data: {
+              full_name: formData.full_name,
+              phone: formData.phone || null,
+            },
+          });
+        }
+        
         setIsDialogOpen(false);
         resetForm();
       } catch (error) {
@@ -411,6 +426,32 @@ export default function DriversPage() {
 
               {/* Driver Details */}
               <div className="space-y-4">
+                {editingDriver && (
+                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                    <h3 className="font-semibold text-sm">Profile Details</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_full_name">Full Name *</Label>
+                        <Input
+                          id="edit_full_name"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                          placeholder="John Doe"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_phone">Phone</Label>
+                        <Input
+                          id="edit_phone"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="0803 123 4567"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {!editingDriver && <h3 className="font-semibold text-sm">Driver Details</h3>}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -482,8 +523,8 @@ export default function DriversPage() {
                 <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isCreating || updateDriver.isPending}>
-                  {isCreating ? 'Creating...' : editingDriver ? 'Update Driver' : 'Create Driver'}
+                <Button type="submit" disabled={isCreating || updateDriver.isPending || updateProfile.isPending}>
+                  {isCreating || updateProfile.isPending ? 'Saving...' : editingDriver ? 'Update Driver' : 'Create Driver'}
                 </Button>
               </DialogFooter>
             </form>

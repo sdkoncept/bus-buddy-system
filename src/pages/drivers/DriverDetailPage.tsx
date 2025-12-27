@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDriverDetail, useDriverTrips, useDriverIncidents } from '@/hooks/useDriverDetail';
+import { useDriverLeavesById, useCreateLeave, useUpdateLeaveStatus, useDeleteLeave } from '@/hooks/useDriverLeaves';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
   User, 
@@ -21,17 +29,34 @@ import {
   IdCard,
   Shield,
   CheckCircle,
-  XCircle
+  XCircle,
+  Plus,
+  CalendarDays,
+  Timer
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
 
 export default function DriverDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const { data: driver, isLoading: driverLoading } = useDriverDetail(id || '');
   const { data: trips, isLoading: tripsLoading } = useDriverTrips(id || '');
   const { data: incidents, isLoading: incidentsLoading } = useDriverIncidents(id || '');
+  const { data: leaves, isLoading: leavesLoading } = useDriverLeavesById(id || '');
+  
+  const createLeave = useCreateLeave();
+  const updateLeaveStatus = useUpdateLeaveStatus();
+  const deleteLeave = useDeleteLeave();
+  
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [leaveForm, setLeaveForm] = useState({
+    leave_type: 'annual',
+    start_date: '',
+    end_date: '',
+    reason: '',
+  });
 
   if (driverLoading) {
     return (
@@ -93,6 +118,16 @@ export default function DriverDetailPage() {
     return <Badge variant={variants[severity] || 'outline'}>{severity}</Badge>;
   };
 
+  const getLeaveStatusBadge = (status: string) => {
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      pending: 'outline',
+      approved: 'default',
+      rejected: 'destructive',
+      completed: 'secondary',
+    };
+    return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
+  };
+
   const initials = driver.profile?.full_name
     ?.split(' ')
     .map((n) => n[0])
@@ -101,6 +136,36 @@ export default function DriverDetailPage() {
 
   const completedTrips = trips?.filter(t => t.status === 'completed').length || 0;
   const totalTrips = trips?.length || 0;
+  
+  // Find active leave
+  const activeLeave = leaves?.find(l => l.is_active);
+
+  const handleCreateLeave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    
+    await createLeave.mutateAsync({
+      driver_id: id,
+      leave_type: leaveForm.leave_type,
+      start_date: leaveForm.start_date,
+      end_date: leaveForm.end_date,
+      reason: leaveForm.reason || undefined,
+      status: 'approved', // Admin creates as approved
+    });
+    
+    setShowLeaveDialog(false);
+    setLeaveForm({ leave_type: 'annual', start_date: '', end_date: '', reason: '' });
+  };
+
+  const handleApproveLeave = async (leaveId: string) => {
+    if (!user?.id) return;
+    await updateLeaveStatus.mutateAsync({ leaveId, status: 'approved', approvedBy: user.id });
+  };
+
+  const handleRejectLeave = async (leaveId: string) => {
+    if (!user?.id) return;
+    await updateLeaveStatus.mutateAsync({ leaveId, status: 'rejected', approvedBy: user.id });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -120,10 +185,36 @@ export default function DriverDetailPage() {
               <IdCard className="h-4 w-4" />
               <span>{driver.license_number}</span>
               {getStatusBadge(driver.status)}
+              {activeLeave && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <Timer className="h-3 w-3 mr-1" />
+                  {activeLeave.days_remaining} days left
+                </Badge>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Active Leave Alert */}
+      {activeLeave && (
+        <Card className="border-info bg-info/10">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CalendarDays className="h-5 w-5 text-info" />
+                <div>
+                  <p className="font-medium">Currently on {activeLeave.leave_type} leave</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(parseISO(activeLeave.start_date), 'MMM d, yyyy')} - {format(parseISO(activeLeave.end_date), 'MMM d, yyyy')}
+                    {' '}({activeLeave.days_total} days total, {activeLeave.days_remaining} remaining)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -257,7 +348,7 @@ export default function DriverDetailPage() {
         </Card>
       </div>
 
-      {/* Tabs for Trip History and Incidents */}
+      {/* Tabs for Trip History, Incidents, and Leaves */}
       <Tabs defaultValue="trips" className="w-full">
         <TabsList>
           <TabsTrigger value="trips" className="gap-2">
@@ -269,6 +360,11 @@ export default function DriverDetailPage() {
             <AlertTriangle className="h-4 w-4" />
             Incidents
             {incidents && <Badge variant="secondary" className="ml-1">{incidents.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="leaves" className="gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Leave History
+            {leaves && <Badge variant="secondary" className="ml-1">{leaves.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
@@ -399,7 +495,192 @@ export default function DriverDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="leaves">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Leave History</CardTitle>
+                <CardDescription>All leave records for this driver</CardDescription>
+              </div>
+              <Button onClick={() => setShowLeaveDialog(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Leave
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {leavesLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : leaves && leaves.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Start Date</TableHead>
+                        <TableHead>End Date</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaves.map((leave) => (
+                        <TableRow key={leave.id} className={leave.is_active ? 'bg-info/5' : ''}>
+                          <TableCell className="font-medium capitalize">
+                            {leave.leave_type}
+                            {leave.is_active && (
+                              <Badge variant="outline" className="ml-2 text-xs">Active</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(parseISO(leave.start_date), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            {format(parseISO(leave.end_date), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span>{leave.days_total} days</span>
+                              {leave.is_active && (
+                                <span className="text-xs text-info font-medium">
+                                  {leave.days_remaining} days remaining
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getLeaveStatusBadge(leave.status)}</TableCell>
+                          <TableCell>
+                            {leave.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-7 text-xs"
+                                  onClick={() => handleApproveLeave(leave.id)}
+                                  disabled={updateLeaveStatus.isPending}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-7 text-xs text-destructive"
+                                  onClick={() => handleRejectLeave(leave.id)}
+                                  disabled={updateLeaveStatus.isPending}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                            {leave.status !== 'pending' && leave.is_expired && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-7 text-xs text-destructive"
+                                onClick={() => deleteLeave.mutate(leave.id)}
+                                disabled={deleteLeave.isPending}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No leave records found</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Add Leave Dialog */}
+      <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Leave for {driver.profile?.full_name}</DialogTitle>
+            <DialogDescription>
+              Create a new leave record for this driver
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateLeave} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="leave_type">Leave Type</Label>
+              <Select 
+                value={leaveForm.leave_type} 
+                onValueChange={(value) => setLeaveForm({ ...leaveForm, leave_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="annual">Annual Leave</SelectItem>
+                  <SelectItem value="sick">Sick Leave</SelectItem>
+                  <SelectItem value="personal">Personal Leave</SelectItem>
+                  <SelectItem value="unpaid">Unpaid Leave</SelectItem>
+                  <SelectItem value="maternity">Maternity Leave</SelectItem>
+                  <SelectItem value="paternity">Paternity Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Start Date</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={leaveForm.start_date}
+                  onChange={(e) => setLeaveForm({ ...leaveForm, start_date: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={leaveForm.end_date}
+                  onChange={(e) => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
+                  min={leaveForm.start_date}
+                  required
+                />
+              </div>
+            </div>
+            {leaveForm.start_date && leaveForm.end_date && (
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                Duration: {differenceInDays(parseISO(leaveForm.end_date), parseISO(leaveForm.start_date)) + 1} days
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason (Optional)</Label>
+              <Textarea
+                id="reason"
+                value={leaveForm.reason}
+                onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                placeholder="Enter reason for leave..."
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowLeaveDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createLeave.isPending}>
+                {createLeave.isPending ? 'Creating...' : 'Create Leave'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
