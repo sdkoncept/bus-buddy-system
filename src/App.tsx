@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 // Lazy loaded pages (code splitting)
 const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
 const DriversPage = lazy(() => import("./pages/drivers/DriversPage"));
+const DriverDetailPage = lazy(() => import("./pages/drivers/DriverDetailPage"));
 const RoutesPage = lazy(() => import("./pages/routes/RoutesPage"));
 const SchedulesPage = lazy(() => import("./pages/schedules/SchedulesPage"));
 const BookingsPage = lazy(() => import("./pages/bookings/BookingsPage"));
@@ -96,6 +97,13 @@ const App = () => (
                 <ProtectedRoute allowedRoles={['admin']}>
                   <Suspense fallback={<PageLoader />}>
                     <DriversPage />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/drivers/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                  <Suspense fallback={<PageLoader />}>
+                    <DriverDetailPage />
                   </Suspense>
                 </ProtectedRoute>
               } />
