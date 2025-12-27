@@ -4,23 +4,15 @@ import { Bus, Users, Route, Ticket, TrendingUp, AlertTriangle } from 'lucide-rea
 import { PendingApprovalsWidget } from '@/components/dashboard/PendingApprovalsWidget';
 import { MechanicDashboard } from '@/components/dashboard/MechanicDashboard';
 import { DriverDashboard } from '@/components/dashboard/DriverDashboard';
-
-const stats = [
-  { title: 'Total Buses', value: '12', icon: Bus, color: 'text-primary', change: '+2 this month' },
-  { title: 'Active Drivers', value: '18', icon: Users, color: 'text-success', change: '3 on leave' },
-  { title: 'Active Routes', value: '8', icon: Route, color: 'text-info', change: '2 new routes' },
-  { title: "Today's Bookings", value: '156', icon: Ticket, color: 'text-warning', change: '+12% from yesterday' },
-];
-
-const recentActivity = [
-  { id: 1, action: 'New booking', details: 'BK20241224001 - Route A to B', time: '5 min ago' },
-  { id: 2, action: 'Bus maintenance completed', details: 'KA-01-AB-1234 - Oil change', time: '1 hour ago' },
-  { id: 3, action: 'Driver assigned', details: 'John Doe assigned to Route C', time: '2 hours ago' },
-  { id: 4, action: 'New route created', details: 'City Center to Airport', time: '3 hours ago' },
-];
+import { useDashboardStats, useDashboardAlerts } from '@/hooks/useDashboardStats';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { profile, role } = useAuth();
+  const navigate = useNavigate();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: alerts, isLoading: alertsLoading } = useDashboardAlerts();
 
   // Show mechanic-specific dashboard
   if (role === 'mechanic') {
@@ -31,6 +23,37 @@ export default function Dashboard() {
   if (role === 'driver') {
     return <DriverDashboard />;
   }
+
+  const statCards = [
+    { 
+      title: 'Total Buses', 
+      value: stats?.totalBuses.toString() || '0', 
+      icon: Bus, 
+      color: 'text-primary', 
+      change: `${stats?.activeBuses || 0} active` 
+    },
+    { 
+      title: 'Active Drivers', 
+      value: stats?.activeDrivers.toString() || '0', 
+      icon: Users, 
+      color: 'text-success', 
+      change: `${stats?.driversOnLeave || 0} on leave` 
+    },
+    { 
+      title: 'Active Routes', 
+      value: stats?.activeRoutes.toString() || '0', 
+      icon: Route, 
+      color: 'text-info', 
+      change: 'Currently running' 
+    },
+    { 
+      title: "Today's Bookings", 
+      value: stats?.todaysBookings.toString() || '0', 
+      icon: Ticket, 
+      color: 'text-warning', 
+      change: 'New bookings today' 
+    },
+  ];
 
   // Default dashboard for other roles
   return (
@@ -46,7 +69,7 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.title} className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -55,8 +78,14 @@ export default function Dashboard() {
               <stat.icon className={`h-5 w-5 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
+                </>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -66,7 +95,7 @@ export default function Dashboard() {
       <PendingApprovalsWidget />
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Recent Activity */}
+        {/* Recent Activity - placeholder for now */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -77,16 +106,9 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                  <div className="h-2 w-2 rounded-full bg-primary mt-2" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">{activity.details}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Activity feed coming soon
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -101,20 +123,36 @@ export default function Dashboard() {
             <CardDescription>Items requiring attention</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-                <p className="font-medium text-sm">3 buses due for maintenance</p>
-                <p className="text-xs text-muted-foreground mt-1">Schedule service within 7 days</p>
+            {alertsLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
-              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                <p className="font-medium text-sm">2 driver licenses expiring</p>
-                <p className="text-xs text-muted-foreground mt-1">Renewal required by month end</p>
+            ) : alerts && alerts.length > 0 ? (
+              <div className="space-y-3">
+                {alerts.map((alert) => (
+                  <div 
+                    key={alert.id} 
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      alert.type === 'warning' 
+                        ? 'bg-warning/10 border border-warning/20 hover:bg-warning/20' 
+                        : alert.type === 'error' 
+                          ? 'bg-destructive/10 border border-destructive/20 hover:bg-destructive/20' 
+                          : 'bg-info/10 border border-info/20 hover:bg-info/20'
+                    }`}
+                    onClick={() => alert.link && navigate(alert.link)}
+                  >
+                    <p className="font-medium text-sm">{alert.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
+                  </div>
+                ))}
               </div>
-              <div className="p-3 rounded-lg bg-info/10 border border-info/20">
-                <p className="font-medium text-sm">Low inventory alert</p>
-                <p className="text-xs text-muted-foreground mt-1">5 items below minimum stock</p>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <p className="text-sm">No alerts at this time</p>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
