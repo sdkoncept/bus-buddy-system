@@ -170,6 +170,10 @@ Deno.serve(async (req) => {
 
     console.log('Driver created successfully:', driverData.id);
 
+    // Note: Never return passwords in API responses for security
+    // The frontend captures the password from the form before submission
+    console.log('Driver account created successfully for:', body.email);
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -179,10 +183,6 @@ Deno.serve(async (req) => {
           full_name: body.full_name,
         },
         driver: driverData,
-        credentials: {
-          email: body.email,
-          password: body.password, // Return so admin can share with driver
-        },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
