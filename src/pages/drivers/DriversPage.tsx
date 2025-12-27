@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDrivers, useUpdateDriver } from '@/hooks/useDrivers';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Users, Search, Edit, Star, Copy, CheckCircle, Trash2, AlertTriangle, Wrench } from 'lucide-react';
+import { Plus, Users, Search, Edit, Star, Copy, CheckCircle, Trash2, AlertTriangle, Wrench, Eye } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -22,6 +23,7 @@ interface OrphanedDriverUser {
 }
 
 export default function DriversPage() {
+  const navigate = useNavigate();
   const { data: drivers, isLoading } = useDrivers();
   const updateDriver = useUpdateDriver();
   const queryClient = useQueryClient();
@@ -626,7 +628,10 @@ export default function DriversPage() {
             <TableBody>
               {filteredDrivers?.map((driver) => (
                 <TableRow key={driver.id}>
-                  <TableCell className="font-medium">
+                  <TableCell 
+                    className="font-medium cursor-pointer hover:text-primary"
+                    onClick={() => navigate(`/drivers/${driver.id}`)}
+                  >
                     {driver.profile?.full_name || '-'}
                     {driver.profile?.email && (
                       <div className="text-xs text-muted-foreground">{driver.profile.email}</div>
@@ -644,6 +649,14 @@ export default function DriversPage() {
                   <TableCell>{getStatusBadge(driver.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => navigate(`/drivers/${driver.id}`)}
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(driver)}>
                         <Edit className="h-4 w-4" />
                       </Button>
