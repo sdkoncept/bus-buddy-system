@@ -253,16 +253,16 @@ const App = () => (
                   </Suspense>
                 </ProtectedRoute>
               } />
+              
+              {/* Driver App - Now inside DashboardLayout for consistent sidebar */}
+              <Route path="/driver-app" element={
+                <ProtectedRoute allowedRoles={['admin', 'driver']}>
+                  <Suspense fallback={<PageLoader />}>
+                    <DriverAppPage />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
             </Route>
-
-            {/* Driver App - Outside DashboardLayout for mobile-first experience */}
-            <Route path="/driver-app" element={
-              <ProtectedRoute allowedRoles={['admin', 'driver']}>
-                <Suspense fallback={<PageLoader />}>
-                  <DriverAppPage />
-                </Suspense>
-              </ProtectedRoute>
-            } />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
