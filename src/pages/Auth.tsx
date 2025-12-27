@@ -32,7 +32,11 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
+    // Don't redirect if URL contains recovery tokens
+    const hash = window.location.hash;
+    const isRecoveryFlow = hash.includes('type=recovery') || hash.includes('access_token');
+    
+    if (user && !isRecoveryFlow) {
       navigate('/dashboard');
     }
   }, [user, navigate]);

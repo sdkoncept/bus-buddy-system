@@ -65,6 +65,8 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isValidRecovery, setIsValidRecovery] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   
   const navigate = useNavigate();
@@ -73,21 +75,52 @@ export default function ResetPassword() {
   const passwordStrength = useMemo(() => calculatePasswordStrength(password), [password]);
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: 'Invalid or Expired Link',
-          description: 'Please request a new password reset link.',
-          variant: 'destructive',
-        });
-        navigate('/auth');
-      }
-    };
+    let timeoutId: NodeJS.Timeout;
     
-    checkSession();
-  }, [navigate, toast]);
+    // Listen for auth state changes to detect PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsValidRecovery(true);
+          setIsChecking(false);
+        } else if (event === 'SIGNED_IN' && session) {
+          // Already signed in from recovery
+          setIsValidRecovery(true);
+          setIsChecking(false);
+        }
+      }
+    );
+
+    // Check if already in a valid session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsValidRecovery(true);
+        setIsChecking(false);
+      } else {
+        // Give time for the hash tokens to be processed
+        timeoutId = setTimeout(() => {
+          setIsChecking(false);
+        }, 2000);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Handle redirect after checking is complete
+  useEffect(() => {
+    if (!isChecking && !isValidRecovery) {
+      toast({
+        title: 'Invalid or Expired Link',
+        description: 'Please request a new password reset link.',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+    }
+  }, [isChecking, isValidRecovery, navigate, toast]);
 
   const validateForm = () => {
     const newErrors: { password?: string; confirmPassword?: string } = {};
@@ -143,6 +176,21 @@ export default function ResetPassword() {
       </span>
     </div>
   );
+
+  // Show loading while checking for valid recovery session
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-16 w-16 rounded-2xl gradient-primary flex items-center justify-center shadow-glow">
+            <Bus className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Verifying reset link...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
