@@ -75,6 +75,7 @@ export function useUpdateProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
       toast.success('Profile updated successfully');
     },
     onError: (error: Error) => {
