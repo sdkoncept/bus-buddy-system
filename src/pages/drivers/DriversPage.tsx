@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDrivers, useUpdateDriver } from '@/hooks/useDrivers';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,10 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Users, Search, Edit, Star, Copy, CheckCircle, Trash2 } from 'lucide-react';
+import { Plus, Users, Search, Edit, Star, Copy, CheckCircle, Trash2, AlertTriangle, Wrench } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+
+interface OrphanedDriverUser {
+  user_id: string;
+  full_name: string;
+  email: string;
+}
 
 export default function DriversPage() {
   const { data: drivers, isLoading } = useDrivers();
@@ -28,6 +34,12 @@ export default function DriversPage() {
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string; fullName: string } | null>(null);
   const [driverToDelete, setDriverToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Orphaned driver users state
+  const [orphanedUsers, setOrphanedUsers] = useState<OrphanedDriverUser[]>([]);
+  const [isCheckingOrphans, setIsCheckingOrphans] = useState(false);
+  const [isFixingOrphan, setIsFixingOrphan] = useState<string | null>(null);
+  const [showOrphanDialog, setShowOrphanDialog] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -55,6 +67,89 @@ export default function DriversPage() {
       inactive: 'destructive',
     };
     return <Badge variant={variants[status || 'inactive'] || 'secondary'}>{status || 'unknown'}</Badge>;
+  };
+
+  // Check for orphaned driver users on mount
+  useEffect(() => {
+    checkForOrphanedDrivers();
+  }, []);
+
+  const checkForOrphanedDrivers = async () => {
+    setIsCheckingOrphans(true);
+    try {
+      // Get all users with driver role
+      const { data: driverRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'driver');
+
+      if (rolesError) throw rolesError;
+
+      if (!driverRoles || driverRoles.length === 0) {
+        setOrphanedUsers([]);
+        return;
+      }
+
+      // Get all driver records with user_id
+      const { data: driverRecords, error: driversError } = await supabase
+        .from('drivers')
+        .select('user_id')
+        .not('user_id', 'is', null);
+
+      if (driversError) throw driversError;
+
+      const linkedUserIds = new Set(driverRecords?.map(d => d.user_id) || []);
+      const orphanedUserIds = driverRoles
+        .map(r => r.user_id)
+        .filter(userId => !linkedUserIds.has(userId));
+
+      if (orphanedUserIds.length === 0) {
+        setOrphanedUsers([]);
+        return;
+      }
+
+      // Get profile info for orphaned users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', orphanedUserIds);
+
+      if (profilesError) throw profilesError;
+
+      setOrphanedUsers(profiles || []);
+    } catch (error) {
+      console.error('Error checking for orphaned drivers:', error);
+    } finally {
+      setIsCheckingOrphans(false);
+    }
+  };
+
+  const fixOrphanedDriver = async (userId: string) => {
+    setIsFixingOrphan(userId);
+    try {
+      // Create a driver record for this user
+      const { error } = await supabase
+        .from('drivers')
+        .insert({
+          user_id: userId,
+          license_number: 'DL-PENDING-' + userId.substring(0, 8).toUpperCase(),
+          license_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'active',
+        });
+
+      if (error) throw error;
+
+      toast.success('Driver profile created successfully');
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+      await checkForOrphanedDrivers();
+    } catch (error) {
+      console.error('Error fixing orphaned driver:', error);
+      toast.error('Failed to create driver profile: ' + (error as Error).message);
+    } finally {
+      setIsFixingOrphan(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -213,6 +308,32 @@ export default function DriversPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Orphaned Driver Alert */}
+      {orphanedUsers.length > 0 && (
+        <Card className="border-warning bg-warning/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2 text-warning-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              Orphaned Driver Accounts Detected
+            </CardTitle>
+            <CardDescription>
+              {orphanedUsers.length} user(s) have the driver role but no linked driver profile. They cannot use the Driver App.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowOrphanDialog(true)}
+              className="gap-2"
+            >
+              <Wrench className="h-4 w-4" />
+              Fix Orphaned Accounts
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Driver Management</h1>
@@ -572,6 +693,63 @@ export default function DriversPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Orphaned Drivers Fix Dialog */}
+      <Dialog open={showOrphanDialog} onOpenChange={setShowOrphanDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5" />
+              Fix Orphaned Driver Accounts
+            </DialogTitle>
+            <DialogDescription>
+              These users have the 'driver' role but no linked driver profile with license information.
+              Create a placeholder driver profile for them to allow access to the Driver App.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {orphanedUsers.map((user) => (
+              <div 
+                key={user.user_id} 
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
+                <div>
+                  <p className="font-medium">{user.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => fixOrphanedDriver(user.user_id)}
+                  disabled={isFixingOrphan === user.user_id}
+                >
+                  {isFixingOrphan === user.user_id ? 'Creating...' : 'Create Profile'}
+                </Button>
+              </div>
+            ))}
+            
+            {orphanedUsers.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                <p>All driver accounts are properly linked!</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrphanDialog(false)}>
+              Close
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={checkForOrphanedDrivers}
+              disabled={isCheckingOrphans}
+            >
+              {isCheckingOrphans ? 'Checking...' : 'Refresh'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
