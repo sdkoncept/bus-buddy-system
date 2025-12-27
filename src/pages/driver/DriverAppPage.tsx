@@ -250,9 +250,12 @@ export default function DriverAppPage() {
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h2 className="text-xl font-semibold mb-2">Driver Not Found</h2>
-            <p className="text-muted-foreground">
-              Your account is not linked to a driver profile. Please contact admin.
+            <h2 className="text-xl font-semibold mb-2">Driver Profile Incomplete</h2>
+            <p className="text-muted-foreground mb-4">
+              Your account has the driver role but is missing a linked driver profile with license information.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please contact your administrator to complete your driver profile setup. They can fix this from the Drivers management page.
             </p>
           </CardContent>
         </Card>
