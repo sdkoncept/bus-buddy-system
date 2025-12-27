@@ -76,6 +76,54 @@ export default function ResetPassword() {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let hasProcessed = false;
+    
+    const processRecovery = async () => {
+      if (hasProcessed) return;
+      hasProcessed = true;
+
+      // Check for PKCE code in URL (new Supabase flow)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        try {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error) {
+            setIsValidRecovery(true);
+            setIsChecking(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Code exchange failed:', err);
+        }
+      }
+
+      // Check for hash tokens (legacy flow)
+      const hash = window.location.hash;
+      if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
+        // Wait for Supabase to process the hash
+        timeoutId = setTimeout(async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setIsValidRecovery(true);
+          }
+          setIsChecking(false);
+        }, 1500);
+        return;
+      }
+
+      // Check if already in a valid session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsValidRecovery(true);
+        setIsChecking(false);
+        return;
+      }
+
+      // No valid recovery found
+      setIsChecking(false);
+    };
     
     // Listen for auth state changes to detect PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -84,25 +132,13 @@ export default function ResetPassword() {
           setIsValidRecovery(true);
           setIsChecking(false);
         } else if (event === 'SIGNED_IN' && session) {
-          // Already signed in from recovery
           setIsValidRecovery(true);
           setIsChecking(false);
         }
       }
     );
 
-    // Check if already in a valid session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsValidRecovery(true);
-        setIsChecking(false);
-      } else {
-        // Give time for the hash tokens to be processed
-        timeoutId = setTimeout(() => {
-          setIsChecking(false);
-        }, 2000);
-      }
-    });
+    processRecovery();
 
     return () => {
       subscription.unsubscribe();

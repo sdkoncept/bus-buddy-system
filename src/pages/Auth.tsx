@@ -32,9 +32,14 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Don't redirect if URL contains recovery tokens
+    // Don't redirect if URL contains recovery tokens (hash or query params)
     const hash = window.location.hash;
-    const isRecoveryFlow = hash.includes('type=recovery') || hash.includes('access_token');
+    const search = window.location.search;
+    const isRecoveryFlow = 
+      hash.includes('type=recovery') || 
+      hash.includes('access_token') ||
+      search.includes('code=') ||
+      search.includes('type=recovery');
     
     if (user && !isRecoveryFlow) {
       navigate('/dashboard');
@@ -139,7 +144,7 @@ export default function Auth() {
 
     setIsLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
     setIsLoading(false);
 
