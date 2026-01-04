@@ -5,15 +5,6 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  root: process.cwd(),
-  publicDir: "public",
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(process.cwd(), "index.html"),
-    },
-  },
   server: {
     host: "::",
     port: 8080,
