@@ -46,9 +46,20 @@ npx supabase functions deploy seed-comprehensive-data
 
 ### Step 4: Invoke the Function
 
+After deployment, you can invoke it via:
+
+**Option A: Using Supabase Dashboard (Easiest)**
+1. Go to the function details page
+2. Click the **"Invoke"** button
+
+**Option B: Using curl/HTTP request**
 ```bash
-npx supabase functions invoke seed-comprehensive-data
+curl -X POST https://ccvjtchhcjzpiefrgbmk.supabase.co/functions/v1/seed-comprehensive-data \
+  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json"
 ```
+
+Get your service_role key from: **Dashboard > Settings > API > service_role key**
 
 ---
 
