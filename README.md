@@ -2,6 +2,8 @@
 
 A comprehensive bus fleet management system with booking, tracking, maintenance, and multi-role access control.
 
+> Built with [Cursor](https://cursor.sh/) - The AI-powered code editor
+
 ## Features
 
 - **Fleet Management**: Bus tracking, maintenance, and inventory management
@@ -28,7 +30,8 @@ A comprehensive bus fleet management system with booking, tracking, maintenance,
 ## Prerequisites
 
 - Node.js 18+ and npm (or bun/yarn/pnpm)
-- Supabase account and project
+- [Supabase](https://supabase.com) account and project
+- [Vercel](https://vercel.com) account (for deployment)
 - Mapbox account (optional, for map features)
 
 ## Local Development Setup
@@ -114,6 +117,42 @@ npm run build
 ```
 
 The built files will be in the `dist/` directory.
+
+## Deployment to Vercel
+
+This project is configured for seamless deployment on Vercel.
+
+### Quick Deploy
+
+1. **Push your code to GitHub** (if not already done)
+
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Add New" → "Project"
+   - Import your GitHub repository
+   - Vercel will automatically detect the Vite configuration
+
+3. **Configure Environment Variables**:
+   In Vercel project settings, add these environment variables:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anon/public key
+
+   See [VERCEL_ENV_VARIABLES.md](./VERCEL_ENV_VARIABLES.md) for detailed instructions.
+
+4. **Deploy**:
+   - Click "Deploy"
+   - Your site will be live in minutes!
+
+### Vercel Configuration
+
+The project includes `vercel.json` with optimal settings:
+- SPA routing support (all routes redirect to `index.html`)
+- Security headers
+- Asset caching
+- Build command: `npm run build`
+- Output directory: `dist`
+
+For more details, see the [Vercel deployment documentation](https://vercel.com/docs).
 
 ## Mobile App Development (Capacitor)
 
