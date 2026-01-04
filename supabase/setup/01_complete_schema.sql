@@ -113,7 +113,7 @@ END $$;
 -- ============================================================================
 
 -- Profiles table
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
   full_name TEXT NOT NULL,
@@ -125,7 +125,7 @@ CREATE TABLE public.profiles (
 );
 
 -- User roles table
-CREATE TABLE public.user_roles (
+CREATE TABLE IF NOT EXISTS public.user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   role app_role NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE public.user_roles (
 );
 
 -- States table (Nigerian states)
-CREATE TABLE public.states (
+CREATE TABLE IF NOT EXISTS public.states (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   code TEXT NOT NULL UNIQUE,
@@ -142,7 +142,7 @@ CREATE TABLE public.states (
 );
 
 -- Stations table
-CREATE TABLE public.stations (
+CREATE TABLE IF NOT EXISTS public.stations (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   code TEXT UNIQUE,
@@ -157,7 +157,7 @@ CREATE TABLE public.stations (
 );
 
 -- Buses table
-CREATE TABLE public.buses (
+CREATE TABLE IF NOT EXISTS public.buses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_number TEXT NOT NULL UNIQUE,
   model TEXT NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE public.buses (
 );
 
 -- Drivers table
-CREATE TABLE public.drivers (
+CREATE TABLE IF NOT EXISTS public.drivers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
   license_number TEXT NOT NULL UNIQUE,
@@ -199,7 +199,7 @@ ADD CONSTRAINT fk_buses_driver
 FOREIGN KEY (current_driver_id) REFERENCES public.drivers(id) ON DELETE SET NULL;
 
 -- Driver leaves table
-CREATE TABLE public.driver_leaves (
+CREATE TABLE IF NOT EXISTS public.driver_leaves (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   driver_id UUID NOT NULL REFERENCES public.drivers(id) ON DELETE CASCADE,
   leave_type TEXT NOT NULL DEFAULT 'annual',
@@ -214,7 +214,7 @@ CREATE TABLE public.driver_leaves (
 );
 
 -- Routes table
-CREATE TABLE public.routes (
+CREATE TABLE IF NOT EXISTS public.routes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   origin TEXT NOT NULL,
@@ -228,7 +228,7 @@ CREATE TABLE public.routes (
 );
 
 -- Route stops table
-CREATE TABLE public.route_stops (
+CREATE TABLE IF NOT EXISTS public.route_stops (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   route_id UUID REFERENCES public.routes(id) ON DELETE CASCADE NOT NULL,
   stop_name TEXT NOT NULL,
@@ -242,7 +242,7 @@ CREATE TABLE public.route_stops (
 );
 
 -- Route stations junction table
-CREATE TABLE public.route_stations (
+CREATE TABLE IF NOT EXISTS public.route_stations (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   route_id UUID NOT NULL REFERENCES public.routes(id) ON DELETE CASCADE,
   station_id UUID NOT NULL REFERENCES public.stations(id) ON DELETE CASCADE,
@@ -256,7 +256,7 @@ CREATE TABLE public.route_stations (
 );
 
 -- Seats table
-CREATE TABLE public.seats (
+CREATE TABLE IF NOT EXISTS public.seats (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   bus_id UUID NOT NULL REFERENCES public.buses(id) ON DELETE CASCADE,
   seat_number TEXT NOT NULL,
@@ -269,7 +269,7 @@ CREATE TABLE public.seats (
 );
 
 -- Schedules table
-CREATE TABLE public.schedules (
+CREATE TABLE IF NOT EXISTS public.schedules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   route_id UUID REFERENCES public.routes(id) ON DELETE CASCADE NOT NULL,
   bus_id UUID REFERENCES public.buses(id) ON DELETE SET NULL,
@@ -285,7 +285,7 @@ CREATE TABLE public.schedules (
 );
 
 -- Trips table
-CREATE TABLE public.trips (
+CREATE TABLE IF NOT EXISTS public.trips (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id UUID REFERENCES public.schedules(id) ON DELETE SET NULL,
   route_id UUID REFERENCES public.routes(id) ON DELETE CASCADE NOT NULL,
@@ -304,7 +304,7 @@ CREATE TABLE public.trips (
 );
 
 -- Bookings table
-CREATE TABLE public.bookings (
+CREATE TABLE IF NOT EXISTS public.bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_number TEXT NOT NULL UNIQUE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -328,10 +328,10 @@ CREATE TABLE public.bookings (
 );
 
 -- Index for linked bookings
-CREATE INDEX idx_bookings_linked_booking ON public.bookings(linked_booking_id) WHERE linked_booking_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_bookings_linked_booking ON public.bookings(linked_booking_id) WHERE linked_booking_id IS NOT NULL;
 
 -- Payments table
-CREATE TABLE public.payments (
+CREATE TABLE IF NOT EXISTS public.payments (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
   amount NUMERIC NOT NULL,
@@ -344,7 +344,7 @@ CREATE TABLE public.payments (
 );
 
 -- Bus locations table
-CREATE TABLE public.bus_locations (
+CREATE TABLE IF NOT EXISTS public.bus_locations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   bus_id UUID REFERENCES public.buses(id) ON DELETE CASCADE NOT NULL,
   trip_id UUID REFERENCES public.trips(id) ON DELETE SET NULL,
@@ -360,7 +360,7 @@ CREATE TABLE public.bus_locations (
 -- ============================================================================
 
 -- Suppliers table
-CREATE TABLE public.suppliers (
+CREATE TABLE IF NOT EXISTS public.suppliers (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   contact_person TEXT,
@@ -373,7 +373,7 @@ CREATE TABLE public.suppliers (
 );
 
 -- Inventory categories table
-CREATE TABLE public.inventory_categories (
+CREATE TABLE IF NOT EXISTS public.inventory_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   description TEXT,
@@ -381,7 +381,7 @@ CREATE TABLE public.inventory_categories (
 );
 
 -- Inventory items table
-CREATE TABLE public.inventory_items (
+CREATE TABLE IF NOT EXISTS public.inventory_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id UUID REFERENCES public.inventory_categories(id) ON DELETE SET NULL,
   supplier_id UUID REFERENCES public.suppliers(id),
@@ -399,7 +399,7 @@ CREATE TABLE public.inventory_items (
 );
 
 -- Stock movements table
-CREATE TABLE public.stock_movements (
+CREATE TABLE IF NOT EXISTS public.stock_movements (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   item_id UUID NOT NULL REFERENCES public.inventory_items(id) ON DELETE CASCADE,
   movement_type TEXT NOT NULL CHECK (movement_type IN ('in', 'out', 'adjustment')),
@@ -412,7 +412,7 @@ CREATE TABLE public.stock_movements (
 );
 
 -- Maintenance records table
-CREATE TABLE public.maintenance_records (
+CREATE TABLE IF NOT EXISTS public.maintenance_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   bus_id UUID REFERENCES public.buses(id) ON DELETE CASCADE NOT NULL,
   type TEXT NOT NULL,
@@ -429,7 +429,7 @@ CREATE TABLE public.maintenance_records (
 );
 
 -- Job cards table
-CREATE TABLE public.job_cards (
+CREATE TABLE IF NOT EXISTS public.job_cards (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   job_card_number TEXT NOT NULL UNIQUE,
   bus_id UUID NOT NULL REFERENCES public.buses(id) ON DELETE CASCADE,
@@ -450,7 +450,7 @@ CREATE TABLE public.job_cards (
 );
 
 -- Vehicle inspections table
-CREATE TABLE public.vehicle_inspections (
+CREATE TABLE IF NOT EXISTS public.vehicle_inspections (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   job_card_id UUID NOT NULL REFERENCES public.job_cards(id) ON DELETE CASCADE,
   inspection_type TEXT NOT NULL DEFAULT 'pre_work',
@@ -477,7 +477,7 @@ CREATE TABLE public.vehicle_inspections (
 );
 
 -- Job card faults table
-CREATE TABLE public.job_card_faults (
+CREATE TABLE IF NOT EXISTS public.job_card_faults (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   job_card_id UUID NOT NULL REFERENCES public.job_cards(id) ON DELETE CASCADE,
   fault_code TEXT,
@@ -495,7 +495,7 @@ CREATE TABLE public.job_card_faults (
 );
 
 -- Work orders table
-CREATE TABLE public.work_orders (
+CREATE TABLE IF NOT EXISTS public.work_orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   maintenance_id UUID REFERENCES public.maintenance_records(id) ON DELETE CASCADE,
   job_card_id UUID REFERENCES public.job_cards(id) ON DELETE SET NULL,
@@ -512,10 +512,10 @@ CREATE TABLE public.work_orders (
 );
 
 -- Index for work orders
-CREATE INDEX idx_work_orders_job_card_id ON public.work_orders(job_card_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_job_card_id ON public.work_orders(job_card_id);
 
 -- Parts usage table
-CREATE TABLE public.parts_usage (
+CREATE TABLE IF NOT EXISTS public.parts_usage (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   work_order_id UUID REFERENCES public.work_orders(id) ON DELETE CASCADE NOT NULL,
   item_id UUID REFERENCES public.inventory_items(id) ON DELETE CASCADE NOT NULL,
@@ -525,7 +525,7 @@ CREATE TABLE public.parts_usage (
 );
 
 -- Stock requests table
-CREATE TABLE public.stock_requests (
+CREATE TABLE IF NOT EXISTS public.stock_requests (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   requested_by UUID NOT NULL REFERENCES auth.users(id),
   item_id UUID NOT NULL REFERENCES public.inventory_items(id),
@@ -545,7 +545,7 @@ CREATE TABLE public.stock_requests (
 -- ============================================================================
 
 -- Transactions table
-CREATE TABLE public.transactions (
+CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT NOT NULL,
   category TEXT NOT NULL,
@@ -559,7 +559,7 @@ CREATE TABLE public.transactions (
 );
 
 -- Payroll table
-CREATE TABLE public.payroll (
+CREATE TABLE IF NOT EXISTS public.payroll (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   driver_id UUID REFERENCES public.drivers(id) ON DELETE CASCADE NOT NULL,
   period_start DATE NOT NULL,
@@ -578,7 +578,7 @@ CREATE TABLE public.payroll (
 -- ============================================================================
 
 -- Complaints table
-CREATE TABLE public.complaints (
+CREATE TABLE IF NOT EXISTS public.complaints (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id),
   booking_id UUID REFERENCES public.bookings(id),
@@ -596,7 +596,7 @@ CREATE TABLE public.complaints (
 );
 
 -- Incidents table
-CREATE TABLE public.incidents (
+CREATE TABLE IF NOT EXISTS public.incidents (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   driver_id UUID NOT NULL REFERENCES public.drivers(id),
   trip_id UUID REFERENCES public.trips(id),
@@ -616,7 +616,7 @@ CREATE TABLE public.incidents (
 );
 
 -- Messages table
-CREATE TABLE public.messages (
+CREATE TABLE IF NOT EXISTS public.messages (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   from_user_id UUID NOT NULL REFERENCES auth.users(id),
   to_user_id UUID NOT NULL REFERENCES auth.users(id),
@@ -628,7 +628,7 @@ CREATE TABLE public.messages (
 );
 
 -- Notifications table
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   title TEXT NOT NULL,
@@ -640,7 +640,7 @@ CREATE TABLE public.notifications (
 );
 
 -- Security audit log
-CREATE TABLE public.security_audit_log (
+CREATE TABLE IF NOT EXISTS public.security_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   action TEXT NOT NULL,
@@ -853,53 +853,78 @@ $$;
 -- ============================================================================
 
 -- Auth user created trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Booking number trigger
+DROP TRIGGER IF EXISTS set_booking_number ON public.bookings;
 CREATE TRIGGER set_booking_number
   BEFORE INSERT ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION public.generate_booking_number();
 
 -- Job card number trigger
+DROP TRIGGER IF EXISTS generate_job_card_number_trigger ON public.job_cards;
 CREATE TRIGGER generate_job_card_number_trigger
   BEFORE INSERT ON public.job_cards
   FOR EACH ROW EXECUTE FUNCTION public.generate_job_card_number();
 
 -- Driver role assignment trigger
+DROP TRIGGER IF EXISTS on_driver_role_assigned ON public.user_roles;
 CREATE TRIGGER on_driver_role_assigned
   AFTER INSERT ON public.user_roles
   FOR EACH ROW EXECUTE FUNCTION public.handle_driver_role_assignment();
 
 -- Stock request notifications
+DROP TRIGGER IF EXISTS on_stock_request_created ON public.stock_requests;
 CREATE TRIGGER on_stock_request_created
   AFTER INSERT ON public.stock_requests
   FOR EACH ROW EXECUTE FUNCTION public.notify_admins_on_stock_request();
 
+DROP TRIGGER IF EXISTS on_stock_request_approved ON public.stock_requests;
 CREATE TRIGGER on_stock_request_approved
   AFTER UPDATE ON public.stock_requests
   FOR EACH ROW EXECUTE FUNCTION public.notify_storekeepers_on_approval();
 
 -- Updated_at triggers
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_buses_updated_at ON public.buses;
 CREATE TRIGGER update_buses_updated_at BEFORE UPDATE ON public.buses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_drivers_updated_at ON public.drivers;
 CREATE TRIGGER update_drivers_updated_at BEFORE UPDATE ON public.drivers FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_routes_updated_at ON public.routes;
 CREATE TRIGGER update_routes_updated_at BEFORE UPDATE ON public.routes FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_schedules_updated_at ON public.schedules;
 CREATE TRIGGER update_schedules_updated_at BEFORE UPDATE ON public.schedules FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_trips_updated_at ON public.trips;
 CREATE TRIGGER update_trips_updated_at BEFORE UPDATE ON public.trips FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON public.bookings;
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON public.bookings FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_inventory_items_updated_at ON public.inventory_items;
 CREATE TRIGGER update_inventory_items_updated_at BEFORE UPDATE ON public.inventory_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_maintenance_records_updated_at ON public.maintenance_records;
 CREATE TRIGGER update_maintenance_records_updated_at BEFORE UPDATE ON public.maintenance_records FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_work_orders_updated_at ON public.work_orders;
 CREATE TRIGGER update_work_orders_updated_at BEFORE UPDATE ON public.work_orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_stations_updated_at ON public.stations;
 CREATE TRIGGER update_stations_updated_at BEFORE UPDATE ON public.stations FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_payments_updated_at ON public.payments;
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_suppliers_updated_at ON public.suppliers;
 CREATE TRIGGER update_suppliers_updated_at BEFORE UPDATE ON public.suppliers FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_stock_requests_updated_at ON public.stock_requests;
 CREATE TRIGGER update_stock_requests_updated_at BEFORE UPDATE ON public.stock_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_complaints_updated_at ON public.complaints;
 CREATE TRIGGER update_complaints_updated_at BEFORE UPDATE ON public.complaints FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_incidents_updated_at ON public.incidents;
 CREATE TRIGGER update_incidents_updated_at BEFORE UPDATE ON public.incidents FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_job_cards_updated_at ON public.job_cards;
 CREATE TRIGGER update_job_cards_updated_at BEFORE UPDATE ON public.job_cards FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_job_card_faults_updated_at ON public.job_card_faults;
 CREATE TRIGGER update_job_card_faults_updated_at BEFORE UPDATE ON public.job_card_faults FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_driver_leaves_updated_at ON public.driver_leaves;
 CREATE TRIGGER update_driver_leaves_updated_at BEFORE UPDATE ON public.driver_leaves FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
@@ -907,7 +932,7 @@ CREATE TRIGGER update_driver_leaves_updated_at BEFORE UPDATE ON public.driver_le
 -- ============================================================================
 
 -- Drivers operational view (security invoker)
-CREATE VIEW public.drivers_operational 
+CREATE OR REPLACE VIEW public.drivers_operational 
 WITH (security_invoker = true)
 AS
 SELECT 
