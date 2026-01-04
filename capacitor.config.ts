@@ -1,12 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.bb9ed831cfeb4f1183212ab9057fc46e',
+  appId: 'com.eagleline.fleet',
   appName: 'eagleline',
   webDir: 'dist',
-  // Hot-reload disabled for production - uncomment for development:
+  // Hot-reload for development - uncomment and set your local dev server URL:
   // server: {
-  //   url: "https://bb9ed831-cfeb-4f11-8321-2ab9057fc46e.lovableproject.com?forceHideBadge=true",
+  //   url: "http://localhost:8080",
   //   cleartext: true
   // },
   plugins: {

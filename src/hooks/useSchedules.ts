@@ -94,10 +94,38 @@ export function useDeleteSchedule() {
   });
 }
 
-// Trips
+// Trips - fetch trips for next 30 days to avoid default 1000 row limit
 export function useTrips() {
   return useQuery({
     queryKey: ['trips'],
+    queryFn: async () => {
+      const today = new Date();
+      const thirtyDaysLater = new Date(today);
+      thirtyDaysLater.setDate(today.getDate() + 30);
+      
+      const { data, error } = await supabase
+        .from('trips')
+        .select(`
+          *,
+          route:routes(*),
+          bus:buses(*)
+        `)
+        .gte('trip_date', today.toISOString().split('T')[0])
+        .lte('trip_date', thirtyDaysLater.toISOString().split('T')[0])
+        .eq('status', 'scheduled')
+        .order('trip_date', { ascending: true })
+        .limit(5000);
+      
+      if (error) throw error;
+      return data as Trip[];
+    },
+  });
+}
+
+// All Trips (for admin)
+export function useAllTrips() {
+  return useQuery({
+    queryKey: ['all-trips'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('trips')

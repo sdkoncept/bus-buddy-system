@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +7,14 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { User, Bell, Lock, Palette, Save, Loader2, Check, X } from 'lucide-react';
+import { User, Bell, Lock, Palette, Save, Loader2, Check, X, Shield } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 
 const passwordSchema = z.string()
   .min(8, 'Password must be at least 8 characters')
@@ -66,17 +68,29 @@ const calculatePasswordStrength = (password: string): PasswordStrength => {
 
 export default function SettingsPage() {
   const { profile, user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     phone: profile?.phone || '',
   });
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    booking: true,
-    updates: false,
+  const [notifications, setNotifications] = useState(() => {
+    // Load from localStorage on initial render
+    const saved = localStorage.getItem('notification_preferences');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { email: true, push: true, booking: true, updates: false };
+      }
+    }
+    return { email: true, push: true, booking: true, updates: false };
   });
+
+  // Save notification preferences to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('notification_preferences', JSON.stringify(notifications));
+  }, [notifications]);
 
   // Change password state
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -85,7 +99,125 @@ export default function SettingsPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<{ password?: string; confirmPassword?: string }>({});
 
+  // 2FA state
+  const [is2FADialogOpen, setIs2FADialogOpen] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState<any[]>([]);
+  const [qrCode, setQrCode] = useState<string>('');
+  const [totpSecret, setTotpSecret] = useState<string>('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [factorId, setFactorId] = useState<string>('');
+  const [isEnabling2FA, setIsEnabling2FA] = useState(false);
+  const [isDisabling2FA, setIsDisabling2FA] = useState(false);
+  const [mfaStep, setMfaStep] = useState<'start' | 'verify' | 'enabled'>('start');
+
   const passwordStrength = useMemo(() => calculatePasswordStrength(newPassword), [newPassword]);
+
+  // Load MFA factors on mount
+  useEffect(() => {
+    const loadMfaFactors = async () => {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (!error && data) {
+        setMfaFactors(data.totp || []);
+      }
+    };
+    loadMfaFactors();
+  }, []);
+
+  const handleEnable2FA = async () => {
+    setIsEnabling2FA(true);
+    try {
+      // Enroll a new TOTP factor
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'Authenticator App',
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        setQrCode(data.totp.qr_code);
+        setTotpSecret(data.totp.secret);
+        setFactorId(data.id);
+        setMfaStep('verify');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to enable 2FA');
+    } finally {
+      setIsEnabling2FA(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (verifyCode.length !== 6) {
+      toast.error('Please enter a 6-digit code');
+      return;
+    }
+
+    setIsEnabling2FA(true);
+    try {
+      // Create a challenge and verify
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: factorId,
+      });
+
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: factorId,
+        challengeId: challengeData.id,
+        code: verifyCode,
+      });
+
+      if (verifyError) throw verifyError;
+
+      toast.success('Two-factor authentication enabled successfully!');
+      setMfaStep('enabled');
+      
+      // Refresh factors list
+      const { data } = await supabase.auth.mfa.listFactors();
+      if (data) {
+        setMfaFactors(data.totp || []);
+      }
+      
+      setIs2FADialogOpen(false);
+      resetMfaState();
+    } catch (error: any) {
+      toast.error(error.message || 'Invalid verification code');
+    } finally {
+      setIsEnabling2FA(false);
+    }
+  };
+
+  const handleDisable2FA = async (factorIdToRemove: string) => {
+    setIsDisabling2FA(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({
+        factorId: factorIdToRemove,
+      });
+
+      if (error) throw error;
+
+      toast.success('Two-factor authentication disabled');
+      
+      // Refresh factors list
+      const { data } = await supabase.auth.mfa.listFactors();
+      if (data) {
+        setMfaFactors(data.totp || []);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to disable 2FA');
+    } finally {
+      setIsDisabling2FA(false);
+    }
+  };
+
+  const resetMfaState = () => {
+    setQrCode('');
+    setTotpSecret('');
+    setVerifyCode('');
+    setFactorId('');
+    setMfaStep('start');
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -261,7 +393,10 @@ export default function SettingsPage() {
             </div>
             <Switch
               checked={notifications.email}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })}
+              onCheckedChange={(checked) => {
+                setNotifications({ ...notifications, email: checked });
+                toast.success(checked ? 'Email notifications enabled' : 'Email notifications disabled');
+              }}
             />
           </div>
           <Separator />
@@ -272,7 +407,10 @@ export default function SettingsPage() {
             </div>
             <Switch
               checked={notifications.push}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, push: checked })}
+              onCheckedChange={(checked) => {
+                setNotifications({ ...notifications, push: checked });
+                toast.success(checked ? 'Push notifications enabled' : 'Push notifications disabled');
+              }}
             />
           </div>
           <Separator />
@@ -283,7 +421,10 @@ export default function SettingsPage() {
             </div>
             <Switch
               checked={notifications.booking}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, booking: checked })}
+              onCheckedChange={(checked) => {
+                setNotifications({ ...notifications, booking: checked });
+                toast.success(checked ? 'Booking confirmations enabled' : 'Booking confirmations disabled');
+              }}
             />
           </div>
           <Separator />
@@ -294,7 +435,10 @@ export default function SettingsPage() {
             </div>
             <Switch
               checked={notifications.updates}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, updates: checked })}
+              onCheckedChange={(checked) => {
+                setNotifications({ ...notifications, updates: checked });
+                toast.success(checked ? 'Marketing updates enabled' : 'Marketing updates disabled');
+              }}
             />
           </div>
         </CardContent>
@@ -434,9 +578,110 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Two-Factor Authentication</p>
-              <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+              <p className="text-sm text-muted-foreground">
+                {mfaFactors.length > 0 
+                  ? 'Your account is protected with 2FA' 
+                  : 'Add an extra layer of security'}
+              </p>
             </div>
-            <Button variant="outline">Enable 2FA</Button>
+            {mfaFactors.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="bg-green-600">
+                  <Check className="h-3 w-3 mr-1" />
+                  Enabled
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDisable2FA(mfaFactors[0].id)}
+                  disabled={isDisabling2FA}
+                >
+                  {isDisabling2FA ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Disable'}
+                </Button>
+              </div>
+            ) : (
+              <Dialog open={is2FADialogOpen} onOpenChange={(open) => {
+                setIs2FADialogOpen(open);
+                if (!open) resetMfaState();
+              }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Enable 2FA</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
+                    <DialogDescription>
+                      {mfaStep === 'start' 
+                        ? 'Secure your account with an authenticator app like Google Authenticator or Authy.'
+                        : 'Scan the QR code with your authenticator app, then enter the 6-digit code.'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {mfaStep === 'start' && (
+                    <div className="space-y-4 py-4">
+                      <div className="rounded-lg bg-muted p-4">
+                        <h4 className="font-medium mb-2">How it works:</h4>
+                        <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                          <li>Click "Generate QR Code" below</li>
+                          <li>Scan the QR code with your authenticator app</li>
+                          <li>Enter the 6-digit code from the app</li>
+                        </ol>
+                      </div>
+                      <Button onClick={handleEnable2FA} disabled={isEnabling2FA} className="w-full">
+                        {isEnabling2FA ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          'Generate QR Code'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {mfaStep === 'verify' && (
+                    <div className="space-y-4 py-4">
+                      {qrCode && (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="bg-white p-4 rounded-lg">
+                            <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-muted-foreground mb-1">Can't scan? Enter this code manually:</p>
+                            <code className="text-xs bg-muted px-2 py-1 rounded font-mono break-all">
+                              {totpSecret}
+                            </code>
+                          </div>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="verify-code">Enter 6-digit code</Label>
+                        <Input
+                          id="verify-code"
+                          type="text"
+                          placeholder="000000"
+                          value={verifyCode}
+                          onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          className="text-center text-2xl tracking-widest font-mono"
+                          maxLength={6}
+                        />
+                      </div>
+                      <Button onClick={handleVerify2FA} disabled={isEnabling2FA || verifyCode.length !== 6} className="w-full">
+                        {isEnabling2FA ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          'Verify & Enable 2FA'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -456,7 +701,10 @@ export default function SettingsPage() {
               <p className="font-medium">Dark Mode</p>
               <p className="text-sm text-muted-foreground">Use dark theme</p>
             </div>
-            <Switch />
+            <Switch 
+              checked={theme === 'dark'}
+              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+            />
           </div>
         </CardContent>
       </Card>

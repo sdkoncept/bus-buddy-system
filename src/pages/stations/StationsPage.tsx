@@ -71,6 +71,37 @@ const StationsPage = () => {
     ) || [];
   }, [stations, selectedState]);
 
+  // Clear selected station when it's no longer in the filtered list and fly to new filter area
+  useEffect(() => {
+    if (selectedStation && filteredStations.length > 0) {
+      const stillInList = filteredStations.some(s => s.id === selectedStation.id);
+      if (!stillInList) {
+        setSelectedStation(null);
+        
+        // Fly to the filtered stations area
+        const stationsWithCoords = filteredStations.filter(s => s.latitude && s.longitude);
+        if (stationsWithCoords.length > 0 && map.current) {
+          if (stationsWithCoords.length === 1) {
+            // Single station - fly directly to it
+            const station = stationsWithCoords[0];
+            map.current.flyTo({
+              center: [station.longitude!, station.latitude!],
+              zoom: 10,
+              duration: 1500,
+            });
+          } else {
+            // Multiple stations - fit bounds
+            const bounds = new mapboxgl.LngLatBounds();
+            stationsWithCoords.forEach(s => {
+              bounds.extend([s.longitude!, s.latitude!]);
+            });
+            map.current.fitBounds(bounds, { padding: 50, maxZoom: 10, duration: 1500 });
+          }
+        }
+      }
+    }
+  }, [filteredStations, selectedStation]);
+
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken || map.current) return;
@@ -108,6 +139,9 @@ const StationsPage = () => {
       setMapLoaded(false);
     };
   }, [mapboxToken]);
+
+  // Store the current flyToStation in a ref so markers always have the latest version
+  const flyToStationRef = useRef<((station: any) => void) | null>(null);
 
   // Update markers when stations change
   useEffect(() => {
@@ -173,8 +207,14 @@ const StationsPage = () => {
           .setPopup(popup)
           .addTo(map.current!);
 
+        // Store station ID in data attribute and use ref for handler to avoid stale closures
+        const stationId = station.id;
         el.addEventListener('click', () => {
-          flyToStation(station);
+          // Find the current station data by ID to ensure fresh data
+          const currentStation = filteredStations.find(s => s.id === stationId) || station;
+          if (flyToStationRef.current) {
+            flyToStationRef.current(currentStation);
+          }
         });
 
         markersRef.current.push(marker);
@@ -284,6 +324,11 @@ const StationsPage = () => {
       pendingFlyToRef.current = { lng, lat };
     }
   }, [mapLoaded]);
+
+  // Keep the ref updated with the latest flyToStation function
+  useEffect(() => {
+    flyToStationRef.current = flyToStation;
+  }, [flyToStation]);
 
   if (statesLoading || stationsLoading) {
     return (
@@ -568,7 +613,24 @@ const StationsPage = () => {
                       </TableRow>
                     ) : (
                       filteredStations.map((station) => (
-                        <TableRow key={station.id} className="cursor-pointer hover:bg-muted/50" onClick={() => flyToStation(station)}>
+                        <TableRow 
+                          key={station.id} 
+                          className="cursor-pointer hover:bg-muted/50" 
+                          onClick={() => {
+                            // Directly set selected station and fly to it
+                            setSelectedStation(station);
+                            skipFitBoundsRef.current = true;
+                            const lat = Number(station.latitude);
+                            const lng = Number(station.longitude);
+                            if (Number.isFinite(lat) && Number.isFinite(lng) && map.current && mapLoaded) {
+                              map.current.flyTo({
+                                center: [lng, lat],
+                                zoom: 14,
+                                duration: 1500,
+                              });
+                            }
+                          }}
+                        >
                           <TableCell>
                             <div>
                               <p className="font-medium">{station.name}</p>
@@ -583,7 +645,24 @@ const StationsPage = () => {
                           </TableCell>
                           <TableCell>
                             {station.latitude && station.longitude && (
-                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); flyToStation(station); }}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  setSelectedStation(station);
+                                  skipFitBoundsRef.current = true;
+                                  const lat = Number(station.latitude);
+                                  const lng = Number(station.longitude);
+                                  if (Number.isFinite(lat) && Number.isFinite(lng) && map.current && mapLoaded) {
+                                    map.current.flyTo({
+                                      center: [lng, lat],
+                                      zoom: 14,
+                                      duration: 1500,
+                                    });
+                                  }
+                                }}
+                              >
                                 <Navigation className="h-4 w-4" />
                               </Button>
                             )}

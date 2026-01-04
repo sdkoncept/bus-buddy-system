@@ -14,6 +14,7 @@ import { useRoutes } from '@/hooks/useRoutes';
 import { useTrips } from '@/hooks/useSchedules';
 import { useCreateRoundTripBooking } from '@/hooks/useBookings';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/currency';
@@ -95,19 +96,34 @@ export default function BookTicketPage() {
     }
   };
 
-  const handleSelectOutbound = (trip: any) => {
+  const handleSelectOutbound = async (trip: any) => {
     setSelectedOutboundTrip(trip);
     
     if (tripType === 'round-trip' && returnRoute && returnDate) {
       const returnDateStr = format(returnDate, 'yyyy-MM-dd');
-      const returnTrips = trips?.filter(
-        (t: any) => t.route_id === returnRoute.id && t.trip_date === returnDateStr && t.status !== 'cancelled'
-      ) || [];
       
-      setReturnResults(returnTrips);
+      // Query return trips directly from database to avoid caching issues
+      const { data: directReturnTrips, error } = await supabase
+        .from('trips')
+        .select('*, route:routes(*), bus:buses(*)')
+        .eq('route_id', returnRoute.id)
+        .eq('trip_date', returnDateStr)
+        .eq('status', 'scheduled');
+      
+      if (error) {
+        console.error('Error fetching return trips:', error);
+        toast.error('Failed to fetch return trips');
+        return;
+      }
+      
+      console.log('Return route:', returnRoute);
+      console.log('Return date:', returnDateStr);
+      console.log('Return trips found:', directReturnTrips);
+      
+      setReturnResults(directReturnTrips || []);
       setStep('select-return');
       
-      if (returnTrips.length === 0) {
+      if (!directReturnTrips || directReturnTrips.length === 0) {
         toast.info('No return trips available. Please select a different return date.');
       }
     } else {
@@ -146,11 +162,17 @@ export default function BookTicketPage() {
       });
 
       toast.success('Booking confirmed successfully!');
+      // Reset all form state for new booking
       setStep('search');
       setSelectedOutboundTrip(null);
       setSelectedReturnTrip(null);
       setOutboundResults([]);
       setReturnResults([]);
+      setSelectedRouteId('');
+      setTripType('one-way');
+      setSearchDate(new Date());
+      setReturnDate(undefined);
+      setPassengerCount(1);
     } catch (error) {
       toast.error('Failed to create booking');
     }

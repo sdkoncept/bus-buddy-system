@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { differenceInDays, parseISO, addDays } from 'date-fns';
+import { addDays } from 'date-fns';
 
 export interface DashboardStats {
   totalBuses: number;
@@ -137,30 +137,18 @@ export function useDashboardAlerts() {
         .select(`
           id,
           end_date,
-          driver:drivers(
-            id,
-            user_id,
-            profile:profiles(full_name)
-          )
+          driver_id
         `)
         .eq('status', 'approved')
         .lte('end_date', threeDaysFromNow.toISOString().split('T')[0])
         .gte('end_date', today.toISOString().split('T')[0]);
 
       if (expiringLeaves && expiringLeaves.length > 0) {
-        const leavesWithDetails = expiringLeaves.map((leave: any) => {
-          const daysRemaining = differenceInDays(parseISO(leave.end_date), today);
-          const driverName = leave.driver?.profile?.full_name || 'Unknown';
-          return { daysRemaining, driverName };
-        });
-        
         alerts.push({
           id: 'leave-expiring',
           type: 'info',
           title: `${expiringLeaves.length} driver leave${expiringLeaves.length > 1 ? 's' : ''} ending soon`,
-          description: leavesWithDetails.map(l => 
-            `${l.driverName}: ${l.daysRemaining} day${l.daysRemaining !== 1 ? 's' : ''} left`
-          ).join(', '),
+          description: 'Check driver management for details',
           link: '/drivers',
         });
       }
@@ -173,10 +161,7 @@ export function useDashboardAlerts() {
           id,
           start_date,
           end_date,
-          driver:drivers(
-            id,
-            profile:profiles(full_name)
-          )
+          driver_id
         `)
         .eq('status', 'approved')
         .lte('start_date', todayStr)
@@ -187,7 +172,7 @@ export function useDashboardAlerts() {
           id: 'drivers-on-leave',
           type: 'info',
           title: `${onLeave.length} driver${onLeave.length > 1 ? 's' : ''} currently on leave`,
-          description: onLeave.map((l: any) => l.driver?.profile?.full_name || 'Unknown').join(', '),
+          description: 'Check driver management for details',
           link: '/drivers',
         });
       }

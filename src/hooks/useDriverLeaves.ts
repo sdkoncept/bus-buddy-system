@@ -64,25 +64,41 @@ export function useDriverLeaves() {
   return useQuery({
     queryKey: ['driver-leaves'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First fetch leaves with driver info
+      const { data: leaves, error: leavesError } = await supabase
         .from('driver_leaves')
         .select(`
           *,
-          driver:drivers(
-            id,
-            user_id,
-            profile:profiles(full_name, email)
-          )
+          driver:drivers(id, user_id)
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (leavesError) throw leavesError;
       
-      return (data || []).map((leave: any) => calculateLeaveDetails({
+      // Get unique user_ids from drivers
+      const userIds = [...new Set((leaves || [])
+        .map((l: any) => l.driver?.user_id)
+        .filter(Boolean))];
+      
+      // Fetch profiles for those users
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds);
+        
+        profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+          acc[p.user_id] = p;
+          return acc;
+        }, {});
+      }
+      
+      return (leaves || []).map((leave: any) => calculateLeaveDetails({
         ...leave,
         driver: leave.driver ? {
           ...leave.driver,
-          profile: Array.isArray(leave.driver.profile) ? leave.driver.profile[0] : leave.driver.profile
+          profile: leave.driver.user_id ? profilesMap[leave.driver.user_id] : null
         } : null
       }));
     },
@@ -141,28 +157,43 @@ export function useExpiringLeaves(daysAhead: number = 3) {
       const futureDate = new Date();
       futureDate.setDate(today.getDate() + daysAhead);
       
-      const { data, error } = await supabase
+      const { data: leaves, error: leavesError } = await supabase
         .from('driver_leaves')
         .select(`
           *,
-          driver:drivers(
-            id,
-            user_id,
-            profile:profiles(full_name, email)
-          )
+          driver:drivers(id, user_id)
         `)
         .eq('status', 'approved')
         .gte('end_date', today.toISOString().split('T')[0])
         .lte('end_date', futureDate.toISOString().split('T')[0])
         .order('end_date', { ascending: true });
 
-      if (error) throw error;
+      if (leavesError) throw leavesError;
       
-      return (data || []).map((leave: any) => calculateLeaveDetails({
+      // Get unique user_ids from drivers
+      const userIds = [...new Set((leaves || [])
+        .map((l: any) => l.driver?.user_id)
+        .filter(Boolean))];
+      
+      // Fetch profiles for those users
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds);
+        
+        profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+          acc[p.user_id] = p;
+          return acc;
+        }, {});
+      }
+      
+      return (leaves || []).map((leave: any) => calculateLeaveDetails({
         ...leave,
         driver: leave.driver ? {
           ...leave.driver,
-          profile: Array.isArray(leave.driver.profile) ? leave.driver.profile[0] : leave.driver.profile
+          profile: leave.driver.user_id ? profilesMap[leave.driver.user_id] : null
         } : null
       }));
     },
@@ -176,27 +207,42 @@ export function useDriversOnLeave() {
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       
-      const { data, error } = await supabase
+      const { data: leaves, error: leavesError } = await supabase
         .from('driver_leaves')
         .select(`
           *,
-          driver:drivers(
-            id,
-            user_id,
-            profile:profiles(full_name, email)
-          )
+          driver:drivers(id, user_id)
         `)
         .eq('status', 'approved')
         .lte('start_date', today)
         .gte('end_date', today);
 
-      if (error) throw error;
+      if (leavesError) throw leavesError;
       
-      return (data || []).map((leave: any) => calculateLeaveDetails({
+      // Get unique user_ids from drivers
+      const userIds = [...new Set((leaves || [])
+        .map((l: any) => l.driver?.user_id)
+        .filter(Boolean))];
+      
+      // Fetch profiles for those users
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds);
+        
+        profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+          acc[p.user_id] = p;
+          return acc;
+        }, {});
+      }
+      
+      return (leaves || []).map((leave: any) => calculateLeaveDetails({
         ...leave,
         driver: leave.driver ? {
           ...leave.driver,
-          profile: Array.isArray(leave.driver.profile) ? leave.driver.profile[0] : leave.driver.profile
+          profile: leave.driver.user_id ? profilesMap[leave.driver.user_id] : null
         } : null
       }));
     },

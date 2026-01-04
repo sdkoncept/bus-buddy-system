@@ -30,7 +30,7 @@ export default function BookingsPage() {
   };
 
   const handleCancelBooking = async (id: string) => {
-    await cancelBooking.mutateAsync({ id, reason: 'Cancelled by admin' });
+    await cancelBooking.mutateAsync({ id, reason: 'Cancelled by admin', isAdmin: true });
   };
 
   if (isLoading) {

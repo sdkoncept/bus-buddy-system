@@ -42,7 +42,8 @@ interface BusLocation {
 
 export default function TrackingPage() {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+  const isPassenger = role === 'passenger';
 
   const { data: buses } = useBuses();
   const { data: schedules } = useSchedules();
@@ -53,6 +54,47 @@ export default function TrackingPage() {
   const [selectedBus, setSelectedBus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [simulatedPositions, setSimulatedPositions] = useState<Map<string, { lat: number; lng: number; heading: number }>>(new Map());
+
+  // Fetch passenger's bookings for today (only for passengers)
+  const { data: passengerBookings, isLoading: bookingsLoading } = useQuery({
+    queryKey: ['passenger-bookings-tracking', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          trip_id,
+          status,
+          trip:trips(
+            id,
+            bus_id,
+            status,
+            trip_date,
+            route:routes(name, origin, destination)
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'confirmed');
+      
+      if (error) throw error;
+      
+      // Filter to today's trips that are in progress
+      return (data || []).filter((booking: any) => 
+        booking.trip?.trip_date === today && 
+        booking.trip?.status === 'in_progress'
+      );
+    },
+    enabled: isPassenger && !!user?.id,
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Get bus IDs that passenger is allowed to track
+  const passengerAllowedBusIds = useMemo(() => {
+    if (!isPassenger || !passengerBookings) return null;
+    return new Set(passengerBookings.map((b: any) => b.trip?.bus_id).filter(Boolean));
+  }, [isPassenger, passengerBookings]);
 
   // Fetch active trips to know which buses are on a trip
   const { data: activeTrips } = useQuery({
@@ -77,9 +119,17 @@ export default function TrackingPage() {
   });
 
   // Memoize active buses to prevent re-renders
+  // For passengers, only show buses from their active bookings
   const activeBuses = useMemo(() => {
-    return buses?.filter((b: any) => b.status === 'active') || [];
-  }, [buses]);
+    const allActiveBuses = buses?.filter((b: any) => b.status === 'active') || [];
+    
+    // If passenger, filter to only their booked buses
+    if (isPassenger && passengerAllowedBusIds !== null) {
+      return allActiveBuses.filter((b: any) => passengerAllowedBusIds.has(b.id));
+    }
+    
+    return allActiveBuses;
+  }, [buses, isPassenger, passengerAllowedBusIds]);
 
   // Check if a bus is on an active trip
   const getBusTripInfo = useCallback((busId: string) => {
@@ -194,7 +244,10 @@ export default function TrackingPage() {
         <div>
           <h1 className="text-3xl font-display font-bold">Live Tracking</h1>
           <p className="text-muted-foreground mt-1">
-            Track buses in real-time on the map
+            {isPassenger 
+              ? 'Track your booked bus in real-time once the trip starts'
+              : 'Track buses in real-time on the map'
+            }
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -231,10 +284,16 @@ export default function TrackingPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bus className="h-5 w-5 text-primary" />
-              Active Buses
+              {isPassenger ? 'Your Bus' : 'Active Buses'}
             </CardTitle>
             <CardDescription>
-              {busLocations.length} buses tracked • {realtimeLocations.length} with GPS
+              {isPassenger 
+                ? (busLocations.length > 0 
+                    ? `Tracking ${busLocations.length} bus${busLocations.length > 1 ? 'es' : ''} from your bookings`
+                    : 'Waiting for your trip to start...'
+                  )
+                : `${busLocations.length} buses tracked • ${realtimeLocations.length} with GPS`
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -316,7 +375,17 @@ export default function TrackingPage() {
               {filteredBuses.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Bus className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No active buses found</p>
+                  {isPassenger ? (
+                    <>
+                      <p className="font-medium">No active trips to track</p>
+                      <p className="text-sm mt-2">
+                        Bus tracking will be available once the driver starts your trip.
+                        Check back closer to your departure time.
+                      </p>
+                    </>
+                  ) : (
+                    <p>No active buses found</p>
+                  )}
                 </div>
               )}
             </div>

@@ -10,7 +10,8 @@ export function useRoutes() {
       const { data, error } = await supabase
         .from('routes')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('is_active', true)
+        .order('name', { ascending: true });
       
       if (error) throw error;
       return data as Route[];

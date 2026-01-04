@@ -208,7 +208,22 @@ export function useCancelBooking() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
+    mutationFn: async ({ id, reason, isAdmin = false }: { id: string; reason?: string; isAdmin?: boolean }) => {
+      // First check if the booking is paid (passengers cannot cancel paid bookings)
+      if (!isAdmin) {
+        const { data: booking, error: fetchError } = await supabase
+          .from('bookings')
+          .select('payment_status')
+          .eq('id', id)
+          .single();
+        
+        if (fetchError) throw fetchError;
+        
+        if (booking?.payment_status === 'completed') {
+          throw new Error('Cannot cancel a paid booking. Please contact support for refund requests.');
+        }
+      }
+      
       const { data, error } = await supabase
         .from('bookings')
         .update({

@@ -244,7 +244,7 @@ export default function MyBookingsPage() {
                           </p>
                         </div>
                         
-                        {booking.status === 'confirmed' && (
+                        {booking.status === 'confirmed' && booking.payment_status !== 'completed' && (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -253,6 +253,11 @@ export default function MyBookingsPage() {
                             <X className="h-4 w-4 mr-1" />
                             Cancel
                           </Button>
+                        )}
+                        {booking.status === 'confirmed' && booking.payment_status === 'completed' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Paid - Non-refundable
+                          </Badge>
                         )}
                       </div>
                     </div>

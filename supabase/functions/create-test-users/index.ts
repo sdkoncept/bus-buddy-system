@@ -13,6 +13,7 @@ interface TestUser {
 }
 
 const testUsers: TestUser[] = [
+  { email: 'admin@sdkoncept.com', password: 'Test1234!', full_name: 'Admin User', role: 'admin' },
   { email: 'staff@sdkoncept.com', password: 'Test1234!', full_name: 'Staff User', role: 'staff' },
   { email: 'storekeeper@sdkoncept.com', password: 'Test1234!', full_name: 'Store Keeper', role: 'storekeeper' },
   { email: 'driver@sdkoncept.com', password: 'Test1234!', full_name: 'Driver User', role: 'driver' },
@@ -82,16 +83,15 @@ Deno.serve(async (req) => {
         }
 
         // Update the role (the handle_new_user trigger will create the profile with default 'passenger' role)
-        if (user.role !== 'passenger') {
-          const { error: roleError } = await supabaseAdmin
-            .from('user_roles')
-            .update({ role: user.role })
-            .eq('user_id', authData.user.id);
+        // Always update role since we want to set the correct role for all test users
+        const { error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .update({ role: user.role })
+          .eq('user_id', authData.user.id);
 
-          if (roleError) {
-            results.push({ email: user.email, status: 'created, role update failed', error: roleError.message });
-            continue;
-          }
+        if (roleError) {
+          results.push({ email: user.email, status: 'created, role update failed', error: roleError.message });
+          continue;
         }
 
         results.push({ email: user.email, status: 'created successfully' });

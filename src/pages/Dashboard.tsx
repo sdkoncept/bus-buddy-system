@@ -4,6 +4,7 @@ import { Bus, Users, Route, Ticket, TrendingUp, AlertTriangle } from 'lucide-rea
 import { PendingApprovalsWidget } from '@/components/dashboard/PendingApprovalsWidget';
 import { MechanicDashboard } from '@/components/dashboard/MechanicDashboard';
 import { DriverDashboard } from '@/components/dashboard/DriverDashboard';
+import { PassengerDashboard } from '@/components/dashboard/PassengerDashboard';
 import { useDashboardStats, useDashboardAlerts } from '@/hooks/useDashboardStats';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,11 @@ export default function Dashboard() {
   // Show driver-specific dashboard
   if (role === 'driver') {
     return <DriverDashboard />;
+  }
+
+  // Show passenger-specific dashboard
+  if (role === 'passenger') {
+    return <PassengerDashboard />;
   }
 
   const statCards = [
