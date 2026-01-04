@@ -220,6 +220,46 @@ supabase/
 **Supabase Edge Function Secrets**:
 - `MAPBOX_PUBLIC_TOKEN` - Mapbox API token (for map features)
 
+## Populating Sample Data
+
+To populate the database with realistic sample data for client demonstration:
+
+### Option 1: Using Edge Function (Recommended)
+
+1. **Deploy the Edge Function:**
+   ```bash
+   supabase functions deploy seed-comprehensive-data
+   ```
+
+2. **Call the function:**
+   ```bash
+   curl -X POST https://YOUR_PROJECT_REF.supabase.co/functions/v1/seed-comprehensive-data \
+     -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+     -H "Content-Type: application/json"
+   ```
+
+   Or use the Supabase Dashboard:
+   - Go to **Edge Functions** → **seed-comprehensive-data**
+   - Click **Invoke** button
+
+This will create:
+- 11 test users (admin, staff, drivers, mechanics, passengers, accounts, storekeeper)
+- Driver profiles with licenses
+- 20+ bookings with payments
+- Maintenance records and work orders
+- Stock requests and transactions
+- Complaints, incidents, and notifications
+
+### Option 2: Using SQL Scripts
+
+1. Run the basic sample data script:
+   ```sql
+   -- In Supabase SQL Editor, run:
+   -- supabase/setup/03_sample_data.sql
+   ```
+
+2. For comprehensive data, use the Edge Function (Option 1) as it handles user creation properly.
+
 ## Troubleshooting
 
 ### Environment Variables Not Loading
@@ -241,6 +281,11 @@ supabase/
 - Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
 - Clear Vite cache: `rm -rf node_modules/.vite`
 - Check TypeScript errors: `npm run lint`
+
+### PWA Build Issues
+- If you encounter PWA build errors on Vercel, ensure `vite-plugin-pwa` is properly installed
+- Check that `pwa-192x192.png` exists in the `public/` directory
+- The PWA plugin is enabled by default for production builds
 
 ## Additional Resources
 
