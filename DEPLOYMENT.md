@@ -62,7 +62,8 @@ netlify deploy --prod
 
 After deploying with the correct configuration:
 
-1. Visit `https://bms.sdkoncept.com`
+1. Visit `vercel --prod
+https://bms.sdkoncept.com`
 2. Log in with your credentials
 3. You should be redirected to `/dashboard` without a 404 error
 4. Try navigating to other routes like `/fleet`, `/drivers`, etc. - they should all work
