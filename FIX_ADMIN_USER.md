@@ -1,5 +1,15 @@
 # Fix Admin User Login - Step by Step Guide
 
+## ⚠️ IMPORTANT: Database Schema Must Be Set Up First!
+
+**If you get the error:** `relation "public.user_roles" does not exist`
+
+**You need to run the database schema first!** See `SETUP_DATABASE_FIRST.md` for instructions.
+
+The schema file is at: `bus-buddy-system/supabase/setup/01_complete_schema.sql`
+
+---
+
 ## Your Admin Credentials
 - **Email:** `akin.anenih@sdkoncept.com`
 - **Password:** `!1Jason2013`
