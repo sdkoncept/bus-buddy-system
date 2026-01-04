@@ -64,13 +64,43 @@ DROP TABLE IF EXISTS public.drivers CASCADE;
 DROP TABLE IF EXISTS public.user_roles CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
--- Drop functions
-DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
-DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
-DROP FUNCTION IF EXISTS public.has_role(UUID, app_role) CASCADE;
-DROP FUNCTION IF EXISTS public.get_user_role(UUID) CASCADE;
+-- Drop all functions dynamically
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT proname, oidvectortypes(proargtypes) as argtypes
+        FROM pg_proc 
+        WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+    ) 
+    LOOP
+        BEGIN
+            EXECUTE 'DROP FUNCTION IF EXISTS public.' || quote_ident(r.proname) || '(' || r.argtypes || ') CASCADE';
+        EXCEPTION WHEN OTHERS THEN
+            -- Ignore errors for functions that don't exist or have different signatures
+            NULL;
+        END;
+    END LOOP;
+END $$;
 
--- Drop types (enums)
+-- Drop all types (enums) dynamically
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT typname 
+        FROM pg_type 
+        WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+        AND typtype = 'e'  -- 'e' = enum type
+    ) 
+    LOOP
+        EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
+    END LOOP;
+END $$;
+
+-- Manual drop list for types (backup method)
 DROP TYPE IF EXISTS public.app_role CASCADE;
 DROP TYPE IF EXISTS public.bus_status CASCADE;
 DROP TYPE IF EXISTS public.booking_status CASCADE;

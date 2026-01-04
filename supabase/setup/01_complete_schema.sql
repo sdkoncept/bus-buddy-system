@@ -8,54 +8,105 @@
 -- ============================================================================
 -- PART 1: ENUMS (Custom Types)
 -- ============================================================================
+-- Note: PostgreSQL doesn't support "CREATE TYPE IF NOT EXISTS"
+-- So we use DO blocks to create types only if they don't exist
+-- ============================================================================
 
 -- User roles
-CREATE TYPE public.app_role AS ENUM ('admin', 'driver', 'passenger', 'storekeeper', 'mechanic', 'staff', 'accounts');
+DO $$ BEGIN
+  CREATE TYPE public.app_role AS ENUM ('admin', 'driver', 'passenger', 'storekeeper', 'mechanic', 'staff', 'accounts');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Bus status
-CREATE TYPE public.bus_status AS ENUM ('active', 'maintenance', 'out_of_service');
+DO $$ BEGIN
+  CREATE TYPE public.bus_status AS ENUM ('active', 'maintenance', 'out_of_service');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Booking status
-CREATE TYPE public.booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
+DO $$ BEGIN
+  CREATE TYPE public.booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Booking type
-CREATE TYPE public.booking_type AS ENUM ('one_way', 'round_trip');
+DO $$ BEGIN
+  CREATE TYPE public.booking_type AS ENUM ('one_way', 'round_trip');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Maintenance status
-CREATE TYPE public.maintenance_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled');
+DO $$ BEGIN
+  CREATE TYPE public.maintenance_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Work order status
-CREATE TYPE public.work_order_status AS ENUM ('pending', 'assigned', 'in_progress', 'completed', 'cancelled');
+DO $$ BEGIN
+  CREATE TYPE public.work_order_status AS ENUM ('pending', 'assigned', 'in_progress', 'completed', 'cancelled');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Payment status
-CREATE TYPE public.payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+DO $$ BEGIN
+  CREATE TYPE public.payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Stock request status
-CREATE TYPE public.stock_request_status AS ENUM ('pending', 'approved', 'admin_approved', 'rejected', 'fulfilled');
+DO $$ BEGIN
+  CREATE TYPE public.stock_request_status AS ENUM ('pending', 'approved', 'admin_approved', 'rejected', 'fulfilled');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Complaint status
-CREATE TYPE public.complaint_status AS ENUM ('open', 'in_progress', 'resolved', 'closed');
+DO $$ BEGIN
+  CREATE TYPE public.complaint_status AS ENUM ('open', 'in_progress', 'resolved', 'closed');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Incident severity
-CREATE TYPE public.incident_severity AS ENUM ('low', 'medium', 'high', 'critical');
+DO $$ BEGIN
+  CREATE TYPE public.incident_severity AS ENUM ('low', 'medium', 'high', 'critical');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Job card status
-CREATE TYPE public.job_card_status AS ENUM (
-  'draft',
-  'inspection_complete',
-  'in_progress',
-  'awaiting_parts',
-  'completed',
-  'closed'
-);
+DO $$ BEGIN
+  CREATE TYPE public.job_card_status AS ENUM (
+    'draft',
+    'inspection_complete',
+    'in_progress',
+    'awaiting_parts',
+    'completed',
+    'closed'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Fault repair status
-CREATE TYPE public.fault_repair_status AS ENUM (
-  'pending',
-  'in_progress',
-  'completed',
-  'deferred'
-);
+DO $$ BEGIN
+  CREATE TYPE public.fault_repair_status AS ENUM (
+    'pending',
+    'in_progress',
+    'completed',
+    'deferred'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ============================================================================
 -- PART 2: CORE TABLES
