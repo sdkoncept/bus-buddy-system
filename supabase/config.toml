@@ -24,5 +24,8 @@ verify_jwt = false
 [functions.seed-sample-data]
 verify_jwt = false
 
+[functions.seed-comprehensive-data]
+verify_jwt = false
+
 [functions.debug-trips]
 verify_jwt = false

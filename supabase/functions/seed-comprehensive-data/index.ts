@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
             ? Math.floor(Math.random() * 500000) + 100000
             : Math.floor(Math.random() * 200000) + 10000,
           description: `${type === 'income' ? 'Revenue' : 'Expense'} transaction`,
-          transaction_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           created_by: accounts[0].user_id,
         });
       }
@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
         
         complaints.push({
           user_id: passenger.user_id,
-          type: complaintTypes[Math.floor(Math.random() * complaintTypes.length)],
+          category: complaintTypes[Math.floor(Math.random() * complaintTypes.length)],
           subject: `Complaint #${i + 1}`,
           description: `Customer complaint regarding service quality`,
           status: status,
@@ -371,12 +371,12 @@ Deno.serve(async (req) => {
         
         incidents.push({
           driver_id: driver.id,
-          type: incidentTypes[Math.floor(Math.random() * incidentTypes.length)],
+          incident_type: incidentTypes[Math.floor(Math.random() * incidentTypes.length)],
           description: `Incident report #${i + 1}`,
-          location: 'Lagos-Ibadan Expressway',
+          location_description: 'Lagos-Ibadan Expressway',
           severity: severities[Math.floor(Math.random() * severities.length)],
-          status: 'reported',
-          incident_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'open',
+          reported_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
       }
 
