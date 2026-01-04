@@ -42,4 +42,25 @@ if (fs.existsSync(distDir)) {
   }
 }
 
+// Ensure no index.html directory exists anywhere
+const checkAndRemoveIndexHtmlDir = (dir) => {
+  try {
+    const indexPath = path.join(dir, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      const stat = fs.statSync(indexPath);
+      if (stat.isDirectory()) {
+        console.log(`Found index.html directory at ${indexPath}, removing...`);
+        fs.rmSync(indexPath, { recursive: true, force: true });
+        console.log('✓ Removed index.html directory');
+      }
+    }
+  } catch (err) {
+    // Ignore errors
+  }
+};
+
+// Check current directory and dist
+checkAndRemoveIndexHtmlDir(rootDir);
+checkAndRemoveIndexHtmlDir(distDir);
+
 console.log('Pre-build checks passed');
