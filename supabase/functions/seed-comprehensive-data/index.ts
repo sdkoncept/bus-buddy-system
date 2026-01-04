@@ -292,10 +292,9 @@ Deno.serve(async (req) => {
         stockRequests.push({
           item_id: item.id,
           requested_by: storekeeper.user_id,
-          quantity: Math.floor(Math.random() * 20) + 5,
-          reason: `Stock replenishment for ${item.name}`,
+          quantity_requested: Math.floor(Math.random() * 20) + 5,
           status: status,
-          requested_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+          notes: `Stock replenishment for ${item.name}`,
         });
       }
 
