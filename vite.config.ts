@@ -18,6 +18,8 @@ export default defineConfig({
       // and throws an unhandled Workbox error that can interfere with app startup.
       // We keep PWA icons but exclude favicon.ico from explicit precache.
       includeAssets: ["pwa-192x192.png"],
+      strategies: "generateSW",
+      injectRegister: "auto",
       manifest: {
         name: "EagleLine Fleet Management",
         short_name: "EagleLine",
@@ -38,8 +40,11 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+        globIgnores: ["**/index.html"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/_/, /\/[^/?]+\.[^/]+$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
