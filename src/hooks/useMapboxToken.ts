@@ -10,15 +10,32 @@ export function useMapboxToken() {
     async function fetchToken() {
       console.log('[useMapboxToken] Fetching token from edge function...');
       try {
-        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-
-        console.log('[useMapboxToken] Response:', { data, error });
-
-        if (error) {
-          console.error('[useMapboxToken] Edge function error:', error);
-          setError(`Failed to load Mapbox token: ${error.message || 'Unknown error'}`);
-          return;
+        // Use direct fetch with anon key since verify_jwt = false but Supabase still requires anon key
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        if (!supabaseUrl || !anonKey) {
+          throw new Error('Supabase URL or anon key not configured');
         }
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/get-mapbox-token`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${anonKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log('[useMapboxToken] Response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[useMapboxToken] HTTP error:', response.status, errorText);
+          throw new Error(`Failed to fetch token: ${response.status} ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('[useMapboxToken] Response data:', data);
 
         if (data?.token) {
           console.log('[useMapboxToken] Token received (length:', data.token.length, ')');
