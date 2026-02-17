@@ -41,6 +41,7 @@ export interface Bus {
   next_maintenance_date?: string;
   mileage?: number;
   notes?: string;
+  traccar_device_id?: number;
   created_at: string;
   updated_at: string;
 }

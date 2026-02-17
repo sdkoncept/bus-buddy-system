@@ -27,6 +27,7 @@ export default function FleetPage() {
     fuel_type: 'diesel',
     status: 'active' as const,
     mileage: 0,
+    traccar_device_id: null as number | null,
   });
 
   const filteredBuses = buses?.filter(bus => 
@@ -68,6 +69,7 @@ export default function FleetPage() {
       fuel_type: 'diesel',
       status: 'active',
       mileage: 0,
+      traccar_device_id: null,
     });
     setEditingBus(null);
   };
@@ -83,6 +85,7 @@ export default function FleetPage() {
       fuel_type: bus.fuel_type || 'diesel',
       status: bus.status,
       mileage: bus.mileage || 0,
+      traccar_device_id: bus.traccar_device_id ?? null,
     });
     setIsDialogOpen(true);
   };
@@ -205,6 +208,22 @@ export default function FleetPage() {
                   </Select>
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="traccar_device_id">Traccar Device ID</Label>
+                <Input
+                  id="traccar_device_id"
+                  type="number"
+                  value={formData.traccar_device_id ?? ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    traccar_device_id: e.target.value ? parseInt(e.target.value, 10) : null,
+                  })}
+                  placeholder="e.g. 123 (from Traccar)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Device ID from Traccar server. Leave empty if not using Traccar.
+                </p>
+              </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>
                   Cancel
@@ -287,6 +306,7 @@ export default function FleetPage() {
                 <TableHead>Capacity</TableHead>
                 <TableHead>Fuel</TableHead>
                 <TableHead>Mileage</TableHead>
+                <TableHead>Traccar ID</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -300,6 +320,7 @@ export default function FleetPage() {
                   <TableCell>{bus.capacity} seats</TableCell>
                   <TableCell className="capitalize">{bus.fuel_type}</TableCell>
                   <TableCell>{bus.mileage?.toLocaleString()} km</TableCell>
+                  <TableCell>{bus.traccar_device_id ?? '-'}</TableCell>
                   <TableCell>{getStatusBadge(bus.status)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(bus)}>
@@ -310,7 +331,7 @@ export default function FleetPage() {
               ))}
               {filteredBuses?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     No buses found
                   </TableCell>
                 </TableRow>

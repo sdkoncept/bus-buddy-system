@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.debug-trips]
 verify_jwt = false
+
+[functions.traccar-webhook]
+verify_jwt = false

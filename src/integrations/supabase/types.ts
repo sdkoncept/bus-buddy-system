@@ -175,6 +175,7 @@ export type Database = {
           notes: string | null
           registration_number: string
           status: Database["public"]["Enums"]["bus_status"]
+          traccar_device_id: number | null
           updated_at: string
           year: number | null
         }
@@ -192,6 +193,7 @@ export type Database = {
           notes?: string | null
           registration_number: string
           status?: Database["public"]["Enums"]["bus_status"]
+          traccar_device_id?: number | null
           updated_at?: string
           year?: number | null
         }
@@ -209,6 +211,7 @@ export type Database = {
           notes?: string | null
           registration_number?: string
           status?: Database["public"]["Enums"]["bus_status"]
+          traccar_device_id?: number | null
           updated_at?: string
           year?: number | null
         }

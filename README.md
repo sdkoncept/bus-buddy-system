@@ -260,6 +260,31 @@ This will create:
 
 2. For comprehensive data, use the Edge Function (Option 1) as it handles user creation properly.
 
+## Traccar GPS Integration
+
+To use Traccar (hosted on another server) for hardware GPS tracking:
+
+1. **Run the migration** to add `traccar_device_id` to buses:
+   ```bash
+   supabase db push
+   ```
+
+2. **Deploy the webhook function**:
+   ```bash
+   supabase functions deploy traccar-webhook
+   ```
+
+3. **Map buses to Traccar devices** in Fleet Management: Edit each bus and set its Traccar Device ID (from your Traccar server).
+
+4. **Configure Traccar** (`traccar.xml`):
+   ```xml
+   <entry key='forward.url'>https://YOUR_PROJECT_REF.supabase.co/functions/v1/traccar-webhook</entry>
+   <entry key='forward.type'>json</entry>
+   <entry key='forward.header'>Authorization: Bearer YOUR_SUPABASE_SERVICE_ROLE_KEY</entry>
+   ```
+
+5. Restart Traccar. Positions will flow into the Live Tracking map automatically.
+
 ## Troubleshooting
 
 ### Environment Variables Not Loading
