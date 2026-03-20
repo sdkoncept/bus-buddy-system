@@ -22,7 +22,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { sampleCurrentTrip, samplePassengerManifest, PassengerManifestEntry } from '@/data/sampleDriverData';
+import { PassengerManifestEntry } from '@/data/sampleDriverData';
 
 interface TripInfo {
   id: string;
@@ -90,19 +90,14 @@ export default function DriverPassengersPage() {
     queryFn: async () => {
       if (!currentTrip?.id) return [];
       
-      // In a real implementation, this would fetch from bookings joined with passenger details
-      // For now, return empty array to show sample data
+      // TODO: replace with bookings + passenger profile join when manifest endpoint is ready
       return [] as PassengerManifestEntry[];
     },
     enabled: !!currentTrip?.id,
   });
 
-  // Use sample data if no real data exists
-  const displayTrip = currentTrip || sampleCurrentTrip as unknown as TripInfo;
-  const displayPassengers = (passengers && passengers.length > 0) 
-    ? passengers 
-    : samplePassengerManifest;
-  const hasRealData = !!currentTrip && !!passengers && passengers.length > 0;
+  const displayTrip = currentTrip;
+  const displayPassengers = passengers ?? [];
 
   // Filter passengers by search term
   const filteredPassengers = displayPassengers.filter(passenger =>
@@ -125,6 +120,17 @@ export default function DriverPassengersPage() {
     );
   }
 
+  if (!displayTrip) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Passenger Manifest</h1>
+          <p className="text-muted-foreground">No active trip found for today.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -132,9 +138,6 @@ export default function DriverPassengersPage() {
         <p className="text-muted-foreground">
           {displayTrip.route?.origin} → {displayTrip.route?.destination}
         </p>
-        {!hasRealData && (
-          <Badge variant="outline" className="mt-2">Sample Data</Badge>
-        )}
       </div>
 
       {/* Trip Info Card */}

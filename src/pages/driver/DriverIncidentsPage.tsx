@@ -36,7 +36,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { sampleIncidents } from '@/data/sampleDriverData';
 
 const INCIDENT_TYPES = [
   { value: 'accident', label: 'Accident', icon: Car },
@@ -62,11 +61,7 @@ export default function DriverIncidentsPage() {
   const { data: incidents, isLoading } = useDriverIncidents();
   const createIncident = useCreateIncident();
   
-  // Use sample data if no real incidents exist
-  const displayIncidents = incidents && incidents.length > 0 
-    ? incidents 
-    : sampleIncidents as unknown as typeof incidents;
-  const hasRealData = incidents && incidents.length > 0;
+  const displayIncidents = incidents ?? [];
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -149,9 +144,6 @@ export default function DriverIncidentsPage() {
         <div>
           <h1 className="text-2xl font-bold">Incidents</h1>
           <p className="text-muted-foreground">Report and view incidents</p>
-          {!hasRealData && displayIncidents && displayIncidents.length > 0 && (
-            <Badge variant="outline" className="mt-2">Sample Data</Badge>
-          )}
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
